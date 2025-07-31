@@ -47,7 +47,7 @@ public class ShareLinkController {
     }
 
     @GetMapping
-    public List<ShareLink> list(@RequestParam Long contentId, Authentication auth) {
+    public List<ShareLink> list(@RequestParam @NotNull Long contentId, Authentication auth) {
         return service.listShareLinks(contentId, auth);
     }
 
