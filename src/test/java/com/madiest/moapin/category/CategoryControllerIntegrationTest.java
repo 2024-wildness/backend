@@ -108,4 +108,75 @@ public class CategoryControllerIntegrationTest {
         assertThat(arr.get(0).get("id").asLong()).isEqualTo(id2);
         assertThat(arr.get(1).get("id").asLong()).isEqualTo(id1);
     }
+
+    @Test
+    void testDeleteCategory() throws Exception {
+        String create = mvc.perform(post("/api/categories")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"ToDelete\"}"))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        long id = mapper.readTree(create).get("id").asLong();
+
+        mvc.perform(delete("/api/categories/" + id)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/categories/" + id)
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testSortByNameAndCreatedDate() throws Exception {
+        // Create categories with distinct names and timestamps
+        mvc.perform(post("/api/categories").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"B\"}"))
+            .andExpect(status().isOk());
+        Thread.sleep(10);
+        mvc.perform(post("/api/categories").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"A\"}"))
+            .andExpect(status().isOk());
+
+        // sort by name
+        String byName = mvc.perform(get("/api/categories?sort=name")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode arrName = mapper.readTree(byName);
+        assertThat(arrName.get(0).get("name").asText()).isEqualTo("A");
+
+        // sort by createdDate
+        String byDate = mvc.perform(get("/api/categories?sort=createdDate")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode arrDate = mapper.readTree(byDate);
+        assertThat(arrDate.get(0).get("name").asText()).isEqualTo("B");
+    }
+
+    @Test
+    void testAccessDeniedForOtherUser() throws Exception {
+        // user1 creates a category
+        String create = mvc.perform(post("/api/categories").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Secret\"}"))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        long id = mapper.readTree(create).get("id").asLong();
+
+        // register and login user2
+        SignUpRequest signup2 = new SignUpRequest();
+        signup2.setUsername("other"); signup2.setEmail("other@example.com"); signup2.setPassword("pass1234");
+        mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(signup2))).andExpect(status().isOk());
+        LoginRequest login2 = new LoginRequest();
+        login2.setUsername("other"); login2.setPassword("pass1234");
+        String resp2 = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(login2))).andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        String token2 = mapper.readTree(resp2).get("accessToken").asText();
+
+        mvc.perform(put("/api/categories/" + id).header("Authorization", "Bearer " + token2)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"X\"}"))
+            .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/categories/" + id).header("Authorization", "Bearer " + token2))
+            .andExpect(status().isForbidden());
+    }
 }
