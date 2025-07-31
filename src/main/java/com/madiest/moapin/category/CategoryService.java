@@ -28,7 +28,8 @@ public class CategoryService {
     public Category createCategory(Category category, Authentication auth) {
         String username = auth.getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalStateException("User not found"));
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "User not found"));
         category.setUser(user);
         return categoryRepository.save(category);
     }
@@ -39,9 +40,11 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public Category getCategory(Long id, Authentication auth) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new IllegalStateException("Category not found"));
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Category not found"));
         if (!category.getUser().getUsername().equals(auth.getName())) {
-            throw new IllegalStateException("Access denied");
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Access denied");
         }
         return category;
     }
