@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: moapin
+
+app:
+  data-source:
+    url: ${POSTGRES_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  storage:
+    endpoint: ${MINIO_ENDPOINT}
+    access-key: ${MINIO_ACCESS_KEY}
+    secret-key: ${MINIO_SECRET_KEY}
+  search:
+    host: ${MEILISEARCH_HOST}
+    api-key: ${MEILISEARCH_API_KEY}
+  email:
+    access-key: ${SES_ACCESS_KEY}
+    secret-key: ${SES_SECRET_KEY}
+    region: ${SES_REGION}
+  jwt:
+    secret: ${JWT_SECRET}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
