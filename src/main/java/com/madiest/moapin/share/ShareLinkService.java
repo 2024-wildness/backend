@@ -32,7 +32,8 @@ public class ShareLinkService {
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         // verify ownership via category service
-        if (content.getCategory() != null && !content.getCategory().getUser().getUsername().equals(auth.getName())) {
+        if (content.getCategory() != null && (content.getCategory().getUser() == null || 
+                !content.getCategory().getUser().getUsername().equals(auth.getName()))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         ShareLink link = new ShareLink();
