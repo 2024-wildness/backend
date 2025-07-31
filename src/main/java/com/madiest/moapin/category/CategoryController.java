@@ -48,4 +48,21 @@ public class CategoryController {
                 categoryService.listCategories(auth, sort);
         return ResponseEntity.ok(list);
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Category> updateCategory(
+            @PathVariable Long id,
+            @Valid @RequestBody Category update,
+            Authentication auth) {
+        Category updated = categoryService.updateCategory(id, update, auth);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PatchMapping("/reorder")
+    public ResponseEntity<Void> reorderCategories(
+            @Valid @RequestBody java.util.List<Long> orderedIds,
+            Authentication auth) {
+        categoryService.reorderCategories(orderedIds, auth);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -77,4 +77,27 @@ public class CategoryService {
         }
         return result;
     }
+
+    /**
+     * Update the name of an existing category belonging to the authenticated user.
+     */
+    @Transactional
+    public Category updateCategory(Long id, Category update, Authentication auth) {
+        Category category = getCategory(id, auth);
+        category.setName(update.getName());
+        return categoryRepository.save(category);
+    }
+
+    /**
+     * Reorder categories by updating their orderIndex according to the given sequence of IDs.
+     */
+    @Transactional
+    public void reorderCategories(java.util.List<Long> orderedIds, Authentication auth) {
+        for (int i = 0; i < orderedIds.size(); i++) {
+            Long catId = orderedIds.get(i);
+            Category category = getCategory(catId, auth);
+            category.setOrderIndex(i);
+            categoryRepository.save(category);
+        }
+    }
 }
