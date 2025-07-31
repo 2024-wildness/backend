@@ -1,0 +1,258 @@
+<context>
+---
+project: MOAPIN
+language: ko
+repo_root: .
+product_mode: single-user
+stack:
+  - spring-boot (Java 24, Gradle Kotlin DSL)
+  - PostgreSQL (RDB)
+  - MinIO (S3 compatible)
+  - MeiliSearch (full-text search)
+  - Amazon SES (email)
+  - Chart.js (FE 전용, BE는 API만)
+  - Timezone: Asia/Seoul
+code_convention: "우아한형제들 자바 코딩 컨벤션 준수(패키지/네이밍/불변/테스트/체크스타일)"
+---
+
+# MOAPIN — Backend PRD (Spring Boot)
+
+## 0. 배경/목표
+개인 사용자 1명이 사진/링크/메모 등 **콘텐츠**를 **카테고리(폴더)**로 정리·검색·공유하고, **알림(리마인드)**과 **통계(일/주/월 추이)**를 확인한다.
+BE는 Spring Boot로 구현하며, **MinIO**를 통한 presigned 업/다운로드, **MeiliSearch** 기반 검색, **서버 도메인 토큰 공유 링크**, **비밀번호 재설정**, **KST 집계**, **경량 내부 AI 요약/오토태깅(옵션, 외부 API 토글 가능)**을 제공한다.
+
+## 1. 스코프
+- **MVP 포함**
+  - 회원가입/로그인/로그아웃 + **비번 재설정(이메일 링크)**
+  - 카테고리(폴더) CRUD, 정렬, 북마크, 상단 고정
+  - 콘텐츠 CRUD(사진·링크·메모), 조회수 집계, **공유/다운로드**
+  - **MinIO presigned 업/다운로드** (멀티파트 정책 적용)
+  - **MeiliSearch 검색**(한국어 보완을 위한 n-gram 필드 + prefix 우선)
+  - **서버 도메인 토큰 공유 링크**: 무제한 또는 **기간 N일**, 다운로드 횟수 제한 옵션, 즉시 폐기
+  - 알림(이메일/스케줄), 통계(일/주/월 집계)
+  - 내부 경량 AI(요약/오토태깅) + 외부 상용 API 토글
+- **MVP 제외**
+  - 협업/조직/역할, 외부 URL 임베드 확장, 실시간 코랩 편집 등
+
+## 2. 아키텍처(요약)
+- **API**: Spring Boot (Java 24) / Gradle(KTS) / Spring MVC
+- **DB**: PostgreSQL + Flyway
+- **Storage**: MinIO(S3) — 버킷 private, 접근은 presigned only
+- **Search**: MeiliSearch — RDB 트랜잭션 **Outbox 패턴** → 인덱서 워커
+- **Mail**: Amazon SES(기본) / SMTP fallback
+- **Scheduler**: Spring Scheduling(배치), 집계 시각 **02:00 KST**
+- **Security**: JWT, Argon2/BCrypt, 레이트리밋(Bucket4j), 감사 로그
+- **Observability**: 요청/쿼리/메시지 큐 지연 메트릭, 경고 임계치 설정
+
+## 3. 도메인 모델
+- `User(id, email, username, pw_hash, created_at)`
+- `PasswordReset(id, user_id, token_hash, expire_at, used_at)`
+- `Category(id, name, sort_mode, is_pinned, bookmarked, created_at, updated_at)`
+- `Content(id, category_id, type[photo|link|memo], title, body, url, file_key,
+           viewed_count, bookmarked, recheck, is_deleted, created_at, updated_at)`
+- `Tag(id, name)` / `ContentTag(content_id, tag_id)`
+- `Share(id, content_id, url_token, expire_days|"unlimited", expire_at,
+         max_downloads, downloads, created_at, revoked_at)`
+- `Reminder(id, content_id|null, title, scheduled_at, repeat_rule, channel[email], is_active)`
+- `Event(id, content_id, kind[view|share|download], ts, ip_hash, ua_hash)`
+- `Outbox(id, agg_type, agg_id, event_type, payload_json, retry_count, status, created_at)`
+- `MetricsDaily/Weekly/Monthly(..., kpi fields ...)`
+
+## 4. API 개요
+### Auth
+- `POST /auth/signup`
+- `POST /auth/login`
+- `POST /auth/logout`
+- `POST /auth/password/forgot` (이메일 입력 → 링크 발송)
+- `POST /auth/password/reset` (token, new_password) — **단발성·TTL 15~30분**
+
+### Category
+- `GET/POST /categories`
+- `PATCH/DELETE /categories/{id}`
+- `POST /categories/{id}/pin|bookmark`
+
+### Content
+- `GET /categories/{id}/contents?sort=created_at|updated_at|viewed_count&order=asc|desc`
+- `POST /categories/{id}/contents`
+- `PATCH/DELETE /contents/{id}`
+- `POST /contents/{id}/{bookmark|recheck}`
+- **Upload**
+  - `POST /uploads/presign` → `{ uploadId?, url or {parts[], part_size}, headers }`
+    - 정책: **단일 PUT(<5MiB)** / **멀티파트(≥5MiB, 기본 8MiB, 마지막 파트 예외)**
+    - 클라이언트가 4MB 요청 시 **서버가 8MiB로 보정** 및 경고 로그
+  - `POST /uploads/complete` (ETag 검증, 메타 저장 → Outbox 이벤트 발행)
+
+### Share (서버 도메인 토큰)
+- `POST /contents/{id}/share` body: `{ expire_days: number|"unlimited", max_downloads?: number }`
+- `GET  /s/{token}` → 토큰 검증 → **짧은 TTL presigned GET(1~5분)** → `302` redirect
+- `DELETE /shares/{id}` → 즉시 폐기(무제한 링크 포함)
+- 다운로드 시 `Event(download)` 기록, `downloads` 증가
+
+### Search (MeiliSearch)
+- `GET /search?q=&tags=&category=&date_from=&date_to=&sort=created_at:desc`
+- 색인 필드
+  - searchable: `title, body, tags, body_ngrams(2~3gram)`
+  - filterable: `category_id, tags, bookmarked, recheck, created_at, updated_at`
+  - sortable: `created_at, updated_at, viewed_count`
+
+### Reminder
+- `GET/POST /reminders`
+- `PATCH/DELETE /reminders/{id}`
+
+### Stats
+- `GET /stats/summary?range=day|week|month`
+- `GET /stats/trends?unit=day|week|month&from=&to=`
+- 집계: 매일 **02:00 KST** 실행
+
+### AI (옵션)
+- `POST /ai/summarize?categoryId=...`
+- `POST /ai/tags/suggest?contentId=...`
+- `.env: AI_PROVIDER=local|external` (기본 local 경량, 필요 시 외부 API)
+
+## 5. 비기능/보안
+- **인증**: JWT + refresh(옵션). 비번 해시 Argon2 또는 BCrypt(cost↑)
+- **Reset Token**: 단발성, TTL 15~30분, 사용 후 즉시 무효, 시도 레이트리밋
+- **스토리지**: 버킷 private, 키는 추측 불가 난수 prefix(`category/{id}/content/{id}`)
+- **공유 토큰**: 무제한 허용하되 **폐기 API/만료/다운로드 제한** 활성화
+- **시간대**: 서버/DB/애플리케이션 모두 `Asia/Seoul` 고정
+- **관측성**: outbox 지연 > 60s 경고, 메일 바운스/실패율 대시보드
+
+## 6. 개발 규칙(배민 컨벤션 반영)
+- 패키지: `com.moapin` 루트, 도메인 기준 모듈(계층 혼합 금지)
+- 네이밍/불변/Exception 처리/Null Object/DTO 변환 규칙 준수
+- Checkstyle/Spotless/Jacoco/ArchUnit 적용, 70%+ 라인 커버리지 목표
+- 테스트: 단위/슬라이스/통합 테스트 분리, Testcontainers(PostgreSQL, MinIO, Meili)
+
+## 7. 마일스톤
+- **M1**: 프로젝트 스캐폴드 + Auth + Reset + MinIO 업로드 파이프
+- **M2**: Category/Content CRUD + Share 토큰 링크(무제한/N일)
+- **M3**: Outbox→Meili 색인 + Search API + 이벤트 집계
+- **M4**: Reminder(이메일/스케줄) + Stats(일/주/월) + AI(옵션)
+
+# TASKS (Taskmaster AI용)
+
+## TASK: 프로젝트 스캐폴드 & 컨벤션
+id: T-001
+type: chore
+priority: P1
+est: 6h
+files:
+  - build.gradle.kts, settings.gradle.kts, gradle/libs.versions.toml
+  - config/checkstyle.xml (배민 컨벤션), spotless, jacoco, archunit
+  - src/main/java/com/moapin/common/*
+acceptance:
+  - [ ] Java 21, Gradle(KTS), Checkstyle/Spotless/Jacoco 적용
+  - [ ] 패키지 구조 `com.moapin.{auth,category,content,share,search,storage,reminder,stats,ai,common}`
+
+## TASK: Auth + 비밀번호 재설정
+id: T-002
+type: feature
+priority: P1
+est: 8h
+files:
+  - src/main/java/com/moapin/auth/*
+  - src/main/java/com/moapin/mail/*
+acceptance:
+  - [ ] `/auth/signup|login|logout` 동작, JWT 발급
+  - [ ] `/auth/password/forgot|reset` 단발성 토큰(15~30분), 레이트리밋
+  - [ ] Amazon SES 발송(도메인 SPF/DKIM/DMARC), SMTP fallback
+
+## TASK: MinIO 업로드/다운로드 파이프
+id: T-003
+type: feature
+priority: P1
+est: 8h
+files:
+  - src/main/java/com/moapin/storage/*
+  - src/main/java/com/moapin/api/UploadController.java
+acceptance:
+  - [ ] `POST /uploads/presign` 단일 PUT(<5MiB) / 멀티파트(≥5MiB, 기본 8MiB)
+  - [ ] `POST /uploads/complete` ETag 검증, 메타 저장, Outbox 이벤트 발행
+  - [ ] presigned GET 발급 유효, 객체 ACL 미노출
+
+## TASK: Category/Content 도메인
+id: T-004
+type: feature
+priority: P1
+est: 10h
+files:
+  - src/main/java/com/moapin/category/*
+  - src/main/java/com/moapin/content/*
+acceptance:
+  - [ ] Category CRUD, 정렬(created/updated/viewed), 북마크/핀
+  - [ ] Content CRUD(사진/링크/메모), 조회수 증가 이벤트 기록
+
+## TASK: Share 토큰 링크(무제한/기간 N일)
+id: T-005
+type: feature
+priority: P1
+depends_on: [T-003, T-004]
+est: 8h
+files:
+  - src/main/java/com/moapin/share/*
+acceptance:
+  - [ ] `POST /contents/{id}/share {expire_days:"unlimited"|number, max_downloads?}`
+  - [ ] `GET /s/{token}` → 짧은 TTL presigned GET(1~5분) → 302
+  - [ ] `DELETE /shares/{id}` 즉시 폐기, 다운로드 카운트/감사 기록
+
+## TASK: Outbox→MeiliSearch 색인
+id: T-006
+type: feature
+priority: P1
+depends_on: [T-004]
+est: 10h
+files:
+  - src/main/java/com/moapin/search/*
+  - src/main/java/com/moapin/indexer/*
+acceptance:
+  - [ ] 트랜잭션 Outbox 패턴(게시/수정/삭제 이벤트 적재)
+  - [ ] 인덱서 워커가 Meili에 색인/삭제, 재시도(DLQ) 동작
+  - [ ] searchable(title, body, tags, body_ngrams), filterable/sortable 설정
+
+## TASK: Search API
+id: T-007
+type: feature
+priority: P1
+depends_on: [T-006]
+est: 6h
+files:
+  - src/main/java/com/moapin/api/SearchController.java
+acceptance:
+  - [ ] `GET /search` 쿼리/필터/정렬 반영, 10k 문서 p95 < 300ms
+  - [ ] 한국어 품질: prefix + n-gram 보조 필드로 부분일치 개선
+
+## TASK: Reminder(이메일/스케줄)
+id: T-008
+type: feature
+priority: P2
+depends_on: [T-002]
+est: 6h
+files:
+  - src/main/java/com/moapin/reminder/*
+acceptance:
+  - [ ] `GET/POST/PATCH/DELETE /reminders` 동작
+  - [ ] Spring Scheduling으로 발송, KST 기준, SLA ±2분
+
+## TASK: Stats 집계(일/주/월, 02:00 KST)
+id: T-009
+type: feature
+priority: P2
+depends_on: [T-004, T-006]
+est: 8h
+files:
+  - src/main/java/com/moapin/stats/*
+acceptance:
+  - [ ] Events → metrics_daily/weekly/monthly 집계
+  - [ ] `GET /stats/summary`, `GET /stats/trends` 응답
+
+## TASK: 내부 경량 AI + 외부 API 토글
+id: T-010
+type: feature
+priority: P3
+est: 8h
+files:
+  - src/main/java/com/moapin/ai/*
+acceptance:
+  - [ ] 로컬 경량 모델(예: 3~4B 4bit) 호출 스텁 + 안전한 비동기 처리
+  - [ ] `.env: AI_PROVIDER=local|external` 토글, 외부 API fallback 가능
+</PRD>

@@ -1,0 +1,533 @@
+MOAPIN Backend – Product Requirements Document
+
+Overview and Scope
+
+MOAPIN is a personal archiving service that allows users to save and organize digital content (photos, web links, text notes, etc.) in categorized collections. This PRD covers the backend of the MOAPIN project, built with Java 24 and Spring Boot. The backend will expose RESTful APIs for a separate front-end client. Key points about the project scope and context:
+	•	Single-User Focus: The platform is designed for individual user accounts. There is no multi-tenant or organization hierarchy; all features assume a single end-user context (each user’s data is private to them). Organization-level or team collaboration features are out of scope.
+	•	Core Functionality: The backend will handle user management, content storage/retrieval, categorization, sharing, search, reminders, analytics, and AI-powered enhancements (summarization/tagging).
+	•	Non-Functional Goals: The system should be secure, scalable to a reasonable number of content items per user, and maintainable. It will follow established coding conventions and best practices (for Java, following the Baedal Minjok Java Style Guide for code conventions). Configuration will be via environment variables or external config for things like API keys and feature toggles.
+
+Technical Stack
+	•	Language & Framework: Java 24 with Spring Boot (latest stable Spring Boot version compatible with Java 24). Build system is Gradle (Kotlin DSL).
+	•	Database: PostgreSQL for persistent relational data (users, content metadata, categories, etc.).
+	•	Object Storage: MinIO (self-hosted S3-compatible storage) for user-uploaded content files (e.g. photos). Presigned URL usage for efficient upload/download without routing large files through the backend.
+	•	Search Engine: MeiliSearch for full-text search indexing and rapid retrieval of content by keywords and filters.
+	•	Email Service: Amazon SES (Simple Email Service) for sending transactional emails (e.g. password reset links, reminder notifications).
+	•	Auth & Security: JWT (JSON Web Tokens) for stateless authentication of API requests. Passwords stored with strong hashing (Argon2 or BCrypt). Proper validation and authorization on all endpoints to ensure each user only accesses their data.
+	•	Scheduling: Spring’s scheduling/threading for background tasks (e.g. sending reminders, generating stats) aligned to Asia/Seoul timezone.
+	•	AI Integration: Lightweight on-premise ML models for NLP tasks (content summarization, auto-tagging). Optionally, external AI API (e.g. OpenAI) as fallback, configurable via environment flag.
+	•	Coding Standards: Follow the “Woowa Bros – Baedal Minjok” Java coding conventions for clean, consistent code style (e.g. naming, formatting, structure).
+
+Functional Requirements
+
+1. User Accounts & Authentication
+
+Users must be able to register and manage their account securely.
+	•	User Registration (Sign-Up): A new user can create an account by providing a unique username (or ID), a password, and an email address. The backend will validate that the username/email are not already in use and then create a new user record. Passwords must be stored as a secure hash (using Argon2 or BCrypt). No organization or team is associated with the user; each account stands alone.
+
+Figure: MOAPIN sign-up interface example. The sign-up form collects a username (“아이디”), password (“비밀번호” entered twice to confirm), and an email address. The backend will expose an API to register a new user with these details, ensuring the username/email are unique and storing the password securely (hashed).
+	•	Login & JWT Issuance: A registered user can log in by providing valid credentials (username/email and password). On successful authentication, the backend issues a JWT token that the client will use for authenticated requests. The token will encode the user’s identity and expire after a set time. (Optionally, a refresh token flow could be considered, but for simplicity a single JWT may suffice.)
+	•	Logout: The system will support user logout. Since authentication is stateless JWT-based, logout can be handled on the client side by discarding the token. If a refresh token or server-side session is used, an endpoint will invalidate the token or session. (In a pure JWT approach without server sessions, logout is essentially token disposal on the client.)
+	•	Password Reset: Users who forget their password can initiate a reset. The backend provides an endpoint to start a password reset process by submitting the account’s email:
+	•	The system generates a secure, random reset token (one-time use, time-limited) and stores it (e.g. in a PasswordReset table or as a signed token).
+	•	An email is sent via SES to the user’s address containing a reset link. The link contains the token (e.g. as a query param) to securely identify the request.
+	•	When the user clicks the link, they will be directed to a front-end page where they can enter a new password. The front-end will call a backend endpoint with the token and the new password. The backend verifies the token and if valid, updates the user’s password to the new one (after hashing). The token then becomes invalid (single use).
+	•	The reset token should expire after a short period (e.g. 1 hour) for security.
+	•	Validation & Security: All authentication-related endpoints should have proper validation and rate limiting (e.g. limit login attempts to prevent brute force). Password strength should be enforced at registration and reset. The JWT should be signed (using HS256 or RS256) and the secret key kept secure. We will also consider using HTTPS in deployment to protect tokens in transit.
+
+2. Category Management (Folders)
+
+Users can organize their content into categories (akin to folders). The backend will provide full CRUD for categories and support organizing/sorting them.
+	•	Create Category: Users can create a new category by providing a name/title. The category is associated with the user (owner) and stored in the database.
+	•	Rename/Edit Category: Users can rename a category or potentially update other attributes (if any, e.g. a color or icon).
+	•	Delete Category: Users can delete a category. If the category contains content, the system should handle those content items – e.g. either allow deletion only if empty or cascade-delete the contents. (For this project, we can implement cascade delete: when a category is removed, all its content items and related data like tags and share links are also removed. Alternatively, we could prevent deletion of non-empty categories – decision to be confirmed with product owner.)
+	•	List Categories: An endpoint will list all categories for the authenticated user. This list can include metadata like the number of content items in each category and timestamps.
+	•	Sorting Categories: Users should be able to view categories in different sort orders. Supported sorting criteria include creation date, last modified date, and perhaps the total views of content within the category ￼. The system will allow these sort options via query parameters (e.g. ?sort=createdDate or ?sort=views). Additionally, a user-defined custom order is supported ￼, meaning the user can manually reorder categories (likely via the front-end drag-and-drop). To support custom ordering, the category model might have an order_index field, and endpoints to update that order.
+	•	Pinned/Favorite Categories: (If applicable) The requirements primarily mention pinning for content, but we should consider if categories themselves can be pinned. It’s likely that pinned items refer to content items rather than entire categories. So we will handle pinning under content features below. For categories, the focus is on sort and organization, not pinning at this time.
+	•	Category Data Restrictions: Each category is isolated to the user – no sharing of categories across users. There is also no nesting of categories (no sub-folders) mentioned, so categories are a flat list for each user.
+
+3. Content Management (Photos, Links, Notes)
+
+Users can create and manage individual content items within categories. Three content types are supported: Photo, Link, and Note (text memo). The backend handles storing metadata about content and facilitating the storage or reference of the content itself.
+	•	Create Content: Users can add new content items in a selected category. The content creation workflow depends on type:
+	•	Photo Upload: When adding a photo, the backend will generate a presigned upload URL (from MinIO) for the client to upload the image file. The client will first request an upload URL (providing perhaps file name and content type), and the backend (using MinIO’s SDK) returns a URL and necessary credentials for direct upload ￼. The client then uploads the file directly to the storage bucket using that URL (HTTP PUT). Once uploaded, the client calls another endpoint (or the same initial call returns information) to create the content record with the file’s identifier/URL. The content record stores the file path or URL, plus metadata like file name, size, etc. We ensure different content types (photos vs. others) are stored in separate paths or buckets as needed ￼ (e.g., MinIO folder for images).
+	•	Link: When adding a link, the user provides a URL (and optionally a title or description). The backend saves the URL and metadata. (In the future, we might fetch preview info from the URL, but not required initially.)
+	•	Note: When adding a text note, the user provides the note content (and possibly a title). The backend saves the text content. We also capture the created timestamp and maybe last edited timestamp.
+	•	Content Fields: All content items will have common fields: a unique ID, a reference to the owning user (inferred via category), a reference to the category they belong to, the type (photo/link/note), timestamps, and any type-specific data:
+	•	Photo: file path or URL, filename, file size, maybe dimensions.
+	•	Link: URL, maybe a title or snippet if provided or fetched.
+	•	Note: the text body, and optionally a title/subject line if the user can give one.
+	•	Tags: Users can attach tags (keywords) to any content item for organization. The backend should allow an optional list of tags on content. Tags can be stored as a separate entity or as a simple string array in the content record. (We will implement as a separate table for flexibility.) Users can later use tags to filter or search content ￼.
+	•	View Content: Fetching a content item’s details by ID should return all its info (including type-specific fields, tags, and perhaps a presigned download URL if it’s a file). Viewing a content’s details (either via an explicit “open” action or via the share link, see below) should also increment its view count. The system will track how many times each content was viewed ￼. This means:
+	•	We maintain a counter on the content item for view count. Every time the owner retrieves the content (or possibly when accessed via share by someone else), we increment this counter.
+	•	The view count can be shown in the UI to help users identify frequently accessed items.
+	•	Edit Content: Users can modify content:
+	•	For photos: perhaps they can change the associated metadata or replace the file (which could involve generating a new upload URL for a new file).
+	•	For links: they might update the URL or add a note to it.
+	•	For notes: edit the text.
+	•	Users can also move content to a different category (which changes the categoryId on the content record).
+	•	Users can add or remove tags on the content in an edit operation.
+	•	Delete Content: Users can delete a content item. This will remove its record from the database. If it’s a photo with a file, the file should also be removed from MinIO to free storage. (We will use the MinIO API to delete the object upon content deletion.)
+	•	Bookmark / Pin Content: Users can mark certain content items as favorite or pinned. A pinned content is effectively bookmarked to stand out:
+	•	In a category listing, pinned content should always appear at the top, regardless of the chosen sort order ￼.
+	•	Additionally, the product might have a dedicated “Bookmarks” page where all pinned content across categories is listed together ￼. The backend can provide an endpoint to fetch all bookmarked items for the user.
+	•	Pinned status is a property of a content item (e.g., a boolean field pinned).
+	•	Only the user’s own content can be pinned by them, and it’s an attribute stored server-side.
+	•	Content Limits & Validation: We will enforce reasonable limits (like max file size for uploads, allowed file types for photos, max length for note text or number of tags, etc.). These details can be defined and validated in the API layer.
+	•	Concurrency & Consistency: When content is created or updated, ensure that related data updates (like category counts, search index updates, etc.) are handled (some synchronously, some asynchronously as noted in other sections).
+
+4. Content Sharing (Shareable Links)
+
+Users may want to share their saved content items with others (who don’t have a MOAPIN account). The backend will support generating secure shareable links for content, with controls on access.
+	•	Generate Share Link: A user can request a shareable link for a specific content item. The backend will create a unique token (a random string, sufficiently long) and associate it with the content item and the creator user. The token will be used to construct a URL, e.g. https://<moapin-server>/share/<token>, which can be given to others.
+	•	Expiration Options: When generating a link, the user can specify an expiration policy:
+	•	Either a number of days the link should be valid (e.g. “valid for 7 days”).
+	•	Or specify it to never expire (an indefinite/permanent link).
+	•	The backend will record an expires_at timestamp if a duration is set. If indefinite, expires_at can be null (and treated as no expiration).
+	•	Download Limit: The user can also set a maximum download count for the link. For example, a link might only allow 5 downloads; after 5 accesses it becomes invalid. The backend will store a max_downloads and keep track of download_count for that share link. If max_downloads is not set (or 0), it means unlimited downloads (until maybe it expires by date).
+	•	Revoke Link: The user can manually revoke a share link at any time through the app (e.g. “disable sharing”). Revoking will mark that share token as inactive (or delete the share record). After revocation, even if the token is known, it should no longer grant access.
+	•	Accessing Shared Content: When someone (the recipient of the link) visits the share URL:
+	•	The backend receives the request (likely via a dedicated controller that identifies the token in the URL).
+	•	It looks up the token in the ShareLink table and verifies:
+	•	Token exists and is active (not revoked).
+	•	Check not expired (if expires_at is set and now > expires_at, reject).
+	•	Check download count (if max_downloads is set and download_count has already reached it, reject).
+	•	If all good, it retrieves the associated content item.
+	•	The response could be:
+	•	For a file (photo): trigger a file download. The backend can either serve the file by streaming from MinIO or (preferably) generate a short-lived presigned download URL and redirect the user to that URL. (Given the user clicking might be via a web browser, a direct redirect to the file URL could immediately download the image.)
+	•	For a note or link: the backend might return a simple page or JSON. Since this is likely accessed by a normal user, perhaps we serve an auto-generated simple HTML page showing the note text or link (with a prompt to copy the URL). This detail can be decided – simplest is to return a basic view for non-auth users to see the content.
+	•	Each successful access will increment the download_count for that share link and also increment the content’s view count (since an external view is still a view).
+	•	If the link is invalid or expired, the user should get an error page (HTTP 410 Gone or 404).
+	•	Permissions: Share links bypass normal authentication (that’s their purpose), but they only allow access to the single content item for which they were created. The token should be practically unguessable (e.g. a UUIDv4 or a cryptographically random 16+ byte string base64/url-safe encoded). This ensures only those who have the exact token can access.
+	•	API Endpoints for Sharing:
+	•	Create Link: e.g. POST /api/share with body including contentId, expiration (days or timestamp or “none”), and maxDownloads (if any). Response returns the generated token (and full URL for convenience) and the settings.
+	•	List Links: GET /api/share could return all active share links the user has, with info on which content and how many downloads so far, etc.
+	•	Revoke Link: DELETE /api/share/{shareId} or possibly DELETE /api/share/{token} to disable that link.
+	•	Access Link: GET /share/{token} – (public endpoint, no auth) to access content.
+	•	This feature allows users to share content externally using server-generated links rather than requiring recipients to have accounts. All share link functionality is on a per-content basis (no bulk sharing of whole category at once, unless the user generates multiple links).
+
+5. Search and Tags
+
+Searching through saved content is a crucial feature. We will implement search using MeiliSearch, which provides full-text search capabilities. Additionally, content tagging is supported to help organize and filter content.
+
+Figure: MOAPIN main page interface with search and category display. A search bar (top center) allows the user to filter content by keyword, and category labels (colored chips showing “NAME”) enable filtering by category. Below, content cards (e.g. “Title 0개”) are shown with their title and item count. The backend provides the data for this view (list of categories with counts) and handles search queries for content matching the input.
+	•	Tagging: Users can add tags (custom keyword labels) to content items when creating or editing them. For example, a user might tag a recipe note with “cooking” or an image with “vacation”. Tags are stored per content item ￼. The user can later filter content by tag or include tags in search queries. The system will ensure tags are manageable (perhaps limit number of tags per item, and tag length). Tags can be implemented as a separate entity (Tag table and a join table) or simply stored as an array of strings in the content record; either approach works, but a separate table allows reusing tag objects across contents. We will likely use a join table for normalization (especially helpful if we want to list all tags the user has).
+	•	Search Indexing: We integrate MeiliSearch to index content data. Each content item will be represented as a document in the search index (per user or a global index filtered by user). The fields indexed likely include:
+	•	Title or name of the content (if notes have titles, or perhaps the first few words of a note, or the link’s title).
+	•	The body text of notes.
+	•	The URL text of links (and maybe any description).
+	•	Tags associated with the content.
+	•	Possibly category name (so that searching for a category term could find items in that category, though category filter can also be separate).
+	•	Other metadata could be indexed as needed (but likely just the textual fields above).
+	•	N-gram Support: To support partial-word matches (especially for languages like Korean or searching within longer words), we will utilize MeiliSearch’s support for n-gram tokenization or add a dedicated ngram field. Essentially, we want the search to be flexible such that if a user types a fragment of a word, relevant content can still be found ￼. MeiliSearch can be configured with custom tokenizer or by indexing substrings. We might configure searchableAttributes and also use MeiliSearch’s settings to ensure fast prefix search.
+	•	Search Query API: The backend will provide an endpoint (e.g. GET /api/search) where the client can send a query string and optional filters:
+	•	Keyword: The query q parameter which is matched against the indexed fields (title, text, tags).
+	•	Filters: We may support filtering by category (e.g. only search within a specific category if user is viewing that context) and by tag or date. For example, the user might narrow results to a certain tag or a date range. MeiliSearch supports filter expressions on fields that we mark as filterable (like categoryId, tags, createdDate).
+	•	If the query is empty but a filter is given (e.g. user selects a tag to view all content with that tag), the endpoint can return all items matching the filter.
+	•	Search Results: The results will include relevant content items with maybe a relevance score (Meili provides that) and the fields needed to display them (title, snippet, etc.). We will likely just return the list of matching content (with their IDs, type, maybe snippet of text).
+	•	Asynchronous Index Updates: We will implement an Outbox pattern for updating the search index:
+	•	Instead of indexing content synchronously during the user request (which could slow down content creation), we record content changes in an Outbox table or queue.
+	•	For example, when a content item is created or edited or deleted, we insert a record into an OutboxEvent table with details (contentId, operation type: CREATE/UPDATE/DELETE).
+	•	A background service or scheduled job will periodically (or instantly via an event listener) process these outbox events. Processing means calling the MeiliSearch API:
+	•	For create/update: construct the document with the latest content data and send to MeiliSearch index (upsert).
+	•	For delete: send a delete command for that document ID in MeiliSearch.
+	•	After processing, mark the outbox event as processed or remove it.
+	•	This ensures the user-facing operations remain fast (just writing to DB and outbox) and the heavier indexing is done in background. The eventual consistency delay (a few seconds) is acceptable for search.
+	•	Indexing Strategy: We might maintain one MeiliSearch index per user to silo data easily. Alternatively, a single index with a userId field and always filter by userId. Either way, the search backend will ensure users can only search their own content (for privacy).
+	•	Search Engine Deployment: MeiliSearch runs as a separate service. The backend will need to communicate with it (likely via HTTP API). We will manage the MeiliSearch index settings (like searchableAttributes, filterableAttributes, etc.) at initialization. Also, ensure the index is created when a new user is registered (if per user) or that userId is filterable (if single index).
+	•	Quick Search Performance: MeiliSearch is chosen for its speed; queries should return quickly even with many documents ￼. We will monitor and adjust settings (like the indexing schedule, index size) as needed to keep search snappy.
+
+6. Reminders & Notifications (Content Re-visit)
+
+MOAPIN offers a reminder feature that helps users re-engage with their saved content. A user can set a reminder on a content item to “remind me about this later.” At the scheduled time, the system will send an email notification prompting the user to revisit the content.
+	•	Setting a Reminder: Users can create a reminder for a specific content item and specify a date/time for the reminder. For example, a user might set a reminder to re-check a note 30 days later. The backend will provide an endpoint like POST /api/reminders where the user supplies the contentId and the desired reminder timestamp.
+	•	Scheduling Engine: The backend will use Spring’s scheduling to handle reminders. Two possible approaches:
+	•	Cron Polling: e.g. run a scheduler every minute (or some granularity) to check for any reminders that are due to be sent at the current time (within that minute). If found, send out those emails.
+	•	Task Scheduling: Or use a scheduling library/component to schedule a task for the exact time of each reminder when it’s created (this might be more precise but could be complex to manage dynamically). Simpler is the cron approach with a lookup each minute.
+	•	We will implement a scheduler that checks for reminders due in the next interval. This scheduler will operate in Asia/Seoul (KST) timezone to align with user expectations. All reminder times stored will be treated as KST by default (assuming users set times in their local KST context).
+	•	Email Notification: When a reminder is due, the backend will send an email via SES to the user’s registered email. The email will contain:
+	•	A subject indicating MOAPIN Reminder and perhaps the content’s title.
+	•	The content of the reminder: e.g. “This is a reminder to check the content: {content title or snippet}.”
+	•	A direct link to view the content (which would likely open the front-end app on that item). The link could simply be the normal app link (since the user is the owner and will log in to view).
+	•	Mark as Checked: After the user receives a reminder and views the content, they can mark the content as reviewed/re-confirmed. This addresses the “재확인한 콘텐츠 체크” feature:
+	•	The backend should allow marking a content item with a flag (e.g. reviewed = true) once the user confirms they have revisited it.
+	•	In the UI, such content can display a special checkmark indicator ￼.
+	•	Content that have been rechecked can be filtered or displayed differently ￼. For example, the user might filter to see content that still need reviewing (i.e. reminders set but not yet checked) vs those already checked.
+	•	The reminder, once executed, could either be deleted or marked as sent; we should ensure a user isn’t spammed. Typically, a reminder is one-time. If the user wants another reminder, they’d set a new one.
+	•	Managing Reminders: Users can list their upcoming reminders (GET /api/reminders) to see what’s scheduled, and they can cancel (DELETE /api/reminders/{id}) if they change their mind. They might also modify a reminder (PUT /api/reminders/{id} to change the time) if needed.
+	•	Limiting Reminders: We might set a limit per user (e.g. no more than N active reminders at a time) for system load reasons, but that can be generous if needed.
+	•	Email Configuration: Using SES means the application needs AWS credentials and proper SES setup (verified sender email, etc.). These will be configured via environment. We will also template the emails nicely (plain text or simple HTML).
+	•	Notification Timing: If multiple reminders fall at the same exact minute, the system can handle sending multiple emails (one per content reminder). The 02:00 KST daily job (for stats) is separate but should not conflict significantly since reminders could be at any time user chooses.
+	•	Time Zones: Since all users are presumably KST-based (the service seems Korea-focused), we will treat reminder times as KST. If we had to support multiple time zones, we’d store timezone or use UTC internally and convert, but for now assume KST only.
+
+￼ Users can configure a reminder for specific content (e.g. set a future date/time to get a prompt). The system will send the alert via email at the configured time (using the email on file). After the user checks the content, the content can be marked accordingly.
+
+￼ Once a content has been reviewed after a reminder, the system adds a checkmark indicator to that content. Based on whether a content is marked as reviewed or not, the interface can filter or display content differently (e.g. highlight content that the user hasn’t rechecked yet).
+
+7. Statistics & Analytics
+
+The backend will gather and provide usage statistics to the user, giving insights into their content usage over time. This includes daily, weekly, and monthly reports of activity, accessible via a “Statistics” or “Reports” section in the app.
+	•	Data to Collect: We will compute metrics such as:
+	•	Total number of content items the user has saved (and how it changes over time).
+	•	Number of new content items added each day/week/month.
+	•	Content view counts aggregated (e.g. total views this week).
+	•	Possibly, breakdown of content by type (how many photos vs notes, etc.), or by category.
+	•	Activity timeline (e.g. days active).
+	•	These will be used to create charts/graphs on the front-end for visualization ￼.
+	•	Daily Aggregation: A scheduled job will run daily at 02:00 KST to aggregate the previous day’s stats:
+	•	Count how many new content items were created that day.
+	•	Sum how many content views occurred that day.
+	•	Other metrics as needed (if any).
+	•	Store this in a daily stats table or cache (e.g. a table user_daily_stats with columns: date, new_content_count, content_views, etc.).
+	•	Weekly/Monthly: Similarly, we can do a job for weekly and monthly:
+	•	Weekly could run every Monday 02:00 to compile last week (or we can sum last 7 daily entries).
+	•	Monthly could run on the 1st of each month 02:00 to compile the previous month’s metrics.
+	•	We might also directly derive weekly from daily data (summing 7 days) and monthly from daily to reduce duplication.
+	•	Report Presentation: The frontend likely requests the stats via an API and then presents graphs. For example:
+	•	GET /api/stats/daily?range=30 might fetch daily data for last 30 days.
+	•	GET /api/stats/weekly?range=12 for last 12 weeks.
+	•	Or a single GET /api/stats that returns a structured payload with daily, weekly, monthly summaries.
+	•	The backend will format the data, but heavy visualization (graphs) is done on frontend using the data points.
+	•	Visualization Data: We’ll provide counts and labels (e.g. dates) to the client. The PDF suggests visualizing quantity of content, usage trends, activity history with graphs ￼ – so likely line charts for content count over time, bar charts for content added per week, etc. The backend’s job is to crunch the numbers.
+	•	Accuracy & Timezone: It’s important that “day” aligns with the user’s notion of day (KST midnight). We will use KST timezone when grouping by date, so that stats reset at midnight KST. Using the 02:00 job means we include full previous day (00:00 to 23:59 KST) in daily stats.
+	•	Performance: Doing daily counts should be fine given moderate data. We will have indices on date fields for creation times to quickly count by day. Even summing views is just summing a field possibly. If the dataset grows huge, we can refine queries or maintain running counters. But initial approach: simple aggregate queries each night.
+	•	Storage: If we keep historical stats, the daily table will have one row per day per user. This is small and fine. We can also compute on the fly by querying content table for counts, but storing gives faster response for long range (e.g. computing a year’s worth of daily data might be heavy on the fly).
+	•	Examples of Stats:
+	•	“You have saved 120 notes, 45 images, and 30 links in total.”
+	•	“You viewed content 200 times this month.”
+	•	“Last week, you added 5 new items, up 2 from the week before.”
+	•	These kinds of insights can be derived from our stored metrics.
+
+￼ The system should provide a reports page with visualized data about the user’s content: how much content is stored, usage trends over time, activity logs, etc., presented as graphs and charts. The backend will aggregate this data and supply it to the front-end for rendering.
+
+8. AI-Powered Features (Summarization & Auto-Tagging)
+
+To enhance the user experience, the backend will incorporate AI functionalities to automatically summarize content and suggest tags, helping users organize and review their content effectively. (The original idea included AI recommendations of content to re-read ￼, but we will prioritize summarization and tagging as the AI features for now.)
+	•	Content Summarization: For long-form content (especially text notes, or possibly the text content of a saved web link), the system can generate a short summary. For example, if a note contains a lengthy article or a link points to a blog, the AI could produce a 1-2 sentence summary highlighting the main point. This helps users recall content at a glance without re-reading the whole thing.
+	•	Auto-Tagging: When a content item (note or link) is added, the system can analyze the text and suggest relevant tags (keywords). For instance, if a note mentions “machine learning” and “Java”, the system might auto-tag it with those terms. This saves the user effort in tagging and might surface additional tags the user didn’t think of. The user can always remove or edit tags later.
+	•	AI Models (Internal vs External): We will first attempt to use an internal lightweight ML model for these tasks:
+	•	Possibly a pre-trained NLP model (e.g. a small transformer or even simpler TF-IDF-based summarizer for summary, and a keyword extractor for tags).
+	•	This model should run locally (no network calls), ensuring data privacy and zero external cost.
+	•	However, small local models may have limited accuracy. Thus, as a fallback, we allow integration with an external AI API – for example, OpenAI’s GPT APIs or a similar service – to perform summarization/tagging when the local model’s confidence is low or if explicitly configured to do so.
+	•	Configuration: An environment variable (e.g. USE_EXTERNAL_AI) will toggle whether external API calls are allowed. Also, API keys for external services (OpenAI, etc.) will be supplied via env configuration. If the flag is off, the system strictly uses the internal model.
+	•	Workflow:
+	•	When a user creates a new content item (especially a note or link), after saving it to the database, the backend can trigger an asynchronous AI analysis:
+	•	Prepare the content data (text of note or maybe fetch the web page content for a link if feasible – though initial version might not fetch external pages, just use what user provided).
+	•	Run the internal summarizer to generate a summary (if the content is long enough to need one).
+	•	Run the internal tag suggester to get some keywords.
+	•	If external AI is enabled and internal results seem insufficient (or we might just always use external if enabled for better quality), send the content to external API and get summary/tags from there.
+	•	Compare or choose results (e.g. external likely better so maybe use it directly when enabled).
+	•	Save the summary and tags: e.g. update the content record with a summary field and add any new tags to the content’s tags. Perhaps mark them as AI-suggested (so UI could highlight them differently or just treat as normal tags).
+	•	This can happen in the background. The user might not see the summary immediately upon creation if it’s still processing. That’s fine – the UI can refresh or indicate “AI is generating summary…” if we want.
+	•	Alternatively, we could do it synchronously and return in the response, but that could slow down content creation (especially if calling an external API). Better to decouple and update later.
+	•	On-Demand AI Actions: Optionally, provide endpoints to trigger AI on demand:
+	•	e.g. POST /api/content/{id}/summarize if a user wants to regenerate summary (maybe after editing content).
+	•	POST /api/content/{id}/auto-tag similarly.
+	•	This gives user control, but the system will already auto-run on creation by default.
+	•	Privacy Considerations: If using external AI, we will be sending the content text to a third-party service (OpenAI etc.). We should ensure users are aware (likely in terms of service) and perhaps avoid sending very sensitive data. The environment toggle allows turning it off entirely for privacy. Also, consider partial anonymization if needed (not trivial though).
+	•	Error Handling: If the AI service fails or times out, it shouldn’t block the main app. We can simply not provide a summary or tags in that case. The user still has their content; they just won’t get AI enhancements for that item.
+	•	AI for Images: The requirements did not explicitly mention analyzing images, but that could be a future expansion (like auto-tagging photos via image recognition). For now, we focus on text-based AI.
+	•	Extensibility: The AI component should be designed modularly so different models or APIs can be plugged in. For example, we might use HuggingFace transformers locally; if a better model is needed, we swap it via config. External could be OpenAI, or if in future, some other service.
+	•	Opt-out: If needed, users could have a setting to disable AI features on their account for privacy. That’s beyond current scope, but we note it as a possibility.
+
+API Specifications
+
+This section outlines the key API endpoints the backend will expose. All endpoints (except those explicitly noted as public) require a valid JWT token in the request (e.g. via Authorization header). The API paths are prefixed with /api for authenticated calls, while some public ones (like share access) are outside /api. Request and response bodies will be in JSON format unless otherwise specified.
+
+Auth & User
+	•	POST /api/auth/signup – Register a new user account.
+Request: JSON with username, password, email.
+Response: 201 Created with user ID or basic profile data, or error if username/email taken.
+	•	POST /api/auth/login – Authenticate a user.
+Request: JSON with username (or email) and password.
+Response: 200 OK with a JWT token (in body or header) to use for subsequent requests. Also returns user info if needed.
+	•	POST /api/auth/logout – Log out the current user.
+Request: (JWT in header). Possibly body with refresh token if we implement that.
+Response: 200 OK (this could simply be a client-side operation for JWT; on server might blacklist token if necessary).
+	•	POST /api/auth/password-reset-request – Initiate password reset.
+Request: JSON with email.
+Response: 200 OK always (to prevent user enumeration, just send OK and send email if email exists).
+Effect: Triggers an email with reset link.
+	•	POST /api/auth/password-reset-confirm – Complete password reset.
+Request: JSON with token (from email link) and newPassword.
+Response: 200 OK on success (password updated), or 400 if token invalid/expired.
+(The exact endpoints for reset flows might be combined into one with different methods, but splitting is clear.)
+
+Categories
+	•	GET /api/categories – Retrieve all categories of the authenticated user.
+Request params: Optional sort (e.g. createdDate, modifiedDate, views, or custom). If custom, return in user-defined order.
+Response: 200 OK, JSON list of category objects (id, name, createdAt, updatedAt, contentCount, etc.).
+	•	POST /api/categories – Create a new category.
+Request: JSON with name (category title).
+Response: 201 Created, JSON of created category (with its id and timestamps).
+	•	PUT /api/categories/{categoryId} – Update a category’s information.
+Request: JSON with fields to update (e.g. name). Possibly also used to update custom order if we decide (or separate endpoint).
+Response: 200 OK with updated category data.
+	•	DELETE /api/categories/{categoryId} – Delete a category.
+Response: 200 OK on success, or error if not allowed. (If not empty and we disallow, respond 400 with message; if cascade delete, then 200 and all child content are removed.)
+
+If custom ordering of categories is a feature, we might have:
+	•	PUT /api/categories/reorder – Update the order of categories.
+Request: JSON with an array of category IDs in the desired order.
+Response: 200 OK. (This sets a new ordering that will be used when sort=custom.)
+
+Content
+	•	GET /api/content?category={id} – List content items in a specific category.
+Request params: category (required) = category ID to filter by. Optional sort (e.g. by createdAt, views, etc.). Optional filters like tag.
+Response: 200 OK, JSON array of content items (basic info: id, type, title, maybe snippet, pinned flag, viewCount, etc.). Pinned items should ideally be flagged or sorted to top by the backend if sort is by something else but pinned exists (or front-end can separate pinned).
+	•	POST /api/content – Create a new content item.
+Request: JSON with categoryId, type (photo|link|note), and type-specific fields:
+	•	If type=photo: could include filename and fileSize (if known) and maybe we handle upload via separate call (see upload URL below). Possibly the client first gets an upload URL (next endpoint) then calls this to finalize creation with the file info. Alternatively, this call could return the presigned URL as part of response.
+	•	If type=link: include url and optional title or description.
+	•	If type=note: include text (and optional title).
+	•	Also common: tags array if user adds tags initially, and maybe pinned flag (though likely pin is separate action, user pins after creation).
+Response: 201 Created, JSON of created content (with its ID and all stored fields). For a photo, if the upload is not yet done, we might include a presigned URL here for the file upload.
+	•	GET /api/content/{contentId} – Get details of a specific content item.
+Response: 200 OK, JSON with full details: id, categoryId, type, all fields (for photo: file URL/path, for link: URL & metadata, for note: text, etc.), tags list, viewCount, pinned status, createdAt, updatedAt.
+Effect: This call will also increment the view count for the content (each time it’s accessed). We might consider not incrementing if the same user repeatedly accesses in a short time, but that complexity can be skipped initially.
+	•	PUT /api/content/{contentId} – Update a content item.
+Request: JSON with any fields to change: e.g. categoryId (to move it), title/text (edit note), url (edit link), tags (replace tag list), or pinned (to pin/unpin). We will validate type consistency (e.g. you can’t change a note into a photo type). If a photo file needs changing, likely a new content item is better; but theoretically we could support replacing a photo: that might involve generating a new upload URL and updating path. Possibly not needed now.
+Response: 200 OK with updated content data.
+	•	DELETE /api/content/{contentId} – Delete a content item.
+Response: 200 OK on success. This will also remove associated data: tags, any share links for it, and the file from storage if applicable.
+	•	POST /api/content/presigned-url – (if using a separate step) Generate a presigned upload URL for a new file.
+Request: JSON or query including filename and maybe contentType.
+Response: 200 OK with a URL and credentials (if needed) to upload to MinIO, plus an uploadId or key. The client then uploads the file and finally calls POST /api/content to create the record (including that key/path).
+(Alternatively, as noted, we might integrate this into the content creation response to reduce steps.)
+	•	GET /api/content/download-url/{contentId} – Get a presigned download URL for a file content.
+Response: 200 OK with URL to GET the file from MinIO (valid short time). This is for the owner to download their own file from the app. (For share by others, they’ll use the share link flow.)
+	•	POST /api/content/{contentId}/pin – Pin or unpin a content item.
+Request: JSON { "pinned": true/false }. (Or separate endpoints for pin vs unpin).
+Response: 200 OK. (This could also be done via the generic PUT content, but a dedicated endpoint is convenient.)
+	•	POST /api/content/{contentId}/tags – Add tags to a content (or replace).
+Request: JSON with tags: [ "tag1", "tag2", ... ].
+Response: 200 OK with updated tag list.
+(Or use PUT content to update tags as mentioned. Either approach.)
+	•	POST /api/content/{contentId}/mark-reviewed – Mark content as reviewed (after reminder).
+Request: (no body needed, the contentId in URL identifies which content to mark).
+Response: 200 OK. This sets the “checked” flag on that content.
+
+Sharing
+	•	POST /api/share – Create a shareable link for a content item.
+Request: JSON with contentId, and options like expireDays (integer, or 0/null for none) and maxDownloads (integer, or null for none).
+Response: 201 Created, JSON with details of the share link: shareId, the token (and full URL e.g. https://.../share/abc123), expiresAt timestamp (if applicable), maxDownloads, currentDownloads (initially 0).
+	•	GET /api/share – List all active share links the user has created.
+Response: 200 OK, JSON array of share link records (id, contentId, token (maybe partial or none for security; token might be sensitive so maybe not returned, or returned fully since user is owner?), expiresAt, maxDownloads, currentDownloads). This helps user manage their links.
+	•	DELETE /api/share/{shareId} – Revoke (delete) a share link.
+Response: 200 OK on success (link is removed or marked inactive). After this, the token should no longer work.
+	•	GET /share/{token} – (Public) Access a shared content via token URL.
+Response: If valid, returns or redirects to content. For a file, likely a redirect (HTTP 302) to a presigned file download URL from MinIO. For a note/link, possibly return a simple HTML or JSON. If we assume this will generally be accessed in a web context, returning a simple HTML page containing the content might be user-friendly. But for now, we can return a basic page or a file download.
+If invalid/expired, return 404 or 410 with a message.
+
+Search & Tags
+	•	GET /api/search – Search for content.
+Request params:
+	•	q: query string (optional, if blank and a filter given, it can act like filter query).
+	•	categoryId: (optional) filter by category.
+	•	tag: (optional, can be multiple) filter by tag(s).
+	•	from and to: (optional) date range for created dates or something if needed (not primary, but possible future extension).
+Response: 200 OK, JSON with a list of search results. Each result could include content id, type, snippet (maybe a highlight of where the query matched), and maybe a relevance score. We will likely use Meili’s default response format transformed to our own.
+Only content belonging to the requesting user will be searched and returned (the backend will ensure this, possibly via index separation or filtering).
+	•	(No need for a special tags endpoint to search by tag since we can use the above filter. We might have an endpoint to list all tags user has, e.g., for UI tag cloud.)
+	•	GET /api/tags – List all tags the user has used (optional feature).
+Response: 200 OK, JSON array of tags (could include usage count per tag). This can help front-end show a tag list or autocomplete.
+
+Reminders
+	•	POST /api/reminders – Set a new reminder.
+Request: JSON with contentId and remindAt (timestamp in ISO format or epoch millis) in KST (or with timezone info).
+Response: 201 Created, JSON with reminder details (id, contentId, remindAt, createdAt).
+	•	GET /api/reminders – Get all active (future) reminders.
+Response: 200 OK, JSON list of reminders. (We might exclude past ones or include a flag if needed.)
+	•	DELETE /api/reminders/{reminderId} – Cancel a reminder.
+Response: 200 OK. (Also could return the reminder info that was canceled.)
+	•	We might also have PUT /api/reminders/{reminderId} to reschedule a reminder to a new time.
+
+Statistics
+	•	GET /api/stats/daily – Get daily statistics.
+Request params: perhaps days (number of days, default 7 or 30).
+Response: 200 OK, JSON with an array of daily data points (date plus metrics). e.g. [ { date: "2025-07-30", newContent: 3, views: 10 }, ... ].
+	•	GET /api/stats/weekly – Get weekly statistics (e.g. last N weeks). Similar structure.
+	•	GET /api/stats/monthly – Get monthly stats.
+(Or a single endpoint GET /api/stats with a param period=daily/weekly/monthly and count=n. Implementation detail.)
+	•	GET /api/stats/summary – (Optional) a quick summary of overall numbers (total content count, total views, etc.).
+
+AI (optional endpoints if needed for manual trigger or debug)
+	•	POST /api/content/{contentId}/ai-analyze – Manually trigger AI analysis (summarize & tag) on a content.
+Response: 200 OK when scheduled/done, returns the generated summary/tags.
+	•	GET /api/content/{contentId}/summary – Retrieve the AI-generated summary for a content (also returned in the content detail by GET content).
+	•	GET /api/content/{contentId}/suggested-tags – Retrieve suggested tags (if not already merged into content’s tags list).
+
+Most of the AI operations will be done automatically and stored, so separate API may not be needed initially.
+
+All endpoints will perform necessary authorization checks (user must own the resource they’re accessing). Errors will be communicated with appropriate HTTP status codes (400 for bad input, 401 for auth needed, 403 for forbidden, 404 for not found, etc., and 500 for unexpected errors).
+
+Data Model & Relationships
+
+Below is an outline of the primary data entities (models) in the system and their relationships. This is a conceptual model; actual schema will be in PostgreSQL tables:
+	•	User (users table): Represents an application user account.
+Fields: id (UUID or bigserial primary key), username, email, password_hash, created_at, updated_at, etc. Possibly additional fields like last_login timestamp.
+Relationships:
+	•	One-to-many with Category (a user has many categories).
+	•	One-to-many with Content (could also be via categories -> content).
+	•	One-to-many with ShareLink indirectly (only their content’s share links).
+	•	One-to-many with Reminder (through content, or we might store userId in reminders too for quick access).
+	•	One-to-many with Stats records (each stat entry tied to a user).
+	•	Category (categories table): A folder for organizing content.
+Fields: id (UUID or serial), user_id (owner), name, order_index (for custom sorting, nullable), created_at, updated_at.
+Relationships:
+	•	Belongs to one User.
+	•	One-to-many with Content (category has many content items).
+	•	Could have a one-to-many with Stats if we track per-category stats, but currently global per user.
+	•	Content (contents table): An item of content saved by the user.
+Fields: id, user_id (redundant but useful, or derive via category -> user), category_id, type (enum: ‘photo’, ‘link’, ‘note’), title (nullable, for notes/links maybe), body (text for notes, or could store note content here; for links maybe store a description here if fetched; for photos not used), url (for link type: the external URL, for photo type: the path or URL in MinIO, for note: not used), file_path (for photos: path or key in storage, could reuse url field for this as well), view_count, is_pinned (boolean), is_reviewed (boolean for the “checked after reminder” status), created_at, updated_at. Possibly summary (text, for AI summary) and maybe store AI-generated tags separately (or just into tags relationship).
+Relationships:
+	•	Belongs to one Category (and through that to one User).
+	•	Many-to-many with Tag (if separate Tag entity or using join table ContentTags).
+	•	One-to-many with ShareLink (a content can have multiple share links).
+	•	One-to-many with Reminder (a content can have zero or one active reminder, we might allow multiple sequential but likely one).
+	•	The Content entity is central; it links to many other pieces.
+	•	Tag (tags table): (Optional normalization) Represents a unique tag label. Alternatively, we might not have this table and simply store tags in a join table with content ID and tag string. But if we want to reuse tags, a table is fine.
+Fields: id, user_id (tags could be user-specific, e.g. one user’s “recipe” tag is separate from another’s, but we could also not store user and keep global tag list – however to avoid collision like two users with tag “work” meaning different contexts, it might be safer to tie tags to user or just keep them in join table only). name.
+Relationships:
+	•	If we have Tag table, then Many-to-many with Content via ContentTag join.
+	•	If not, then content tags are just an array in Content or a join table with tag string.
+	•	ContentTag (content_tags table): Join of Content and Tag.
+Fields: content_id, tag_id (if Tag table exists), or could be tag_name if no Tag table.
+Relationships:
+	•	Many-to-one to Content, many-to-one to Tag.
+	•	ShareLink (share_links table): A record of a generated shareable link for a content item.
+Fields: id (could be the token itself or separate numeric ID with token as another field), content_id, token (unique string), expires_at (timestamp, nullable for no expiry), max_downloads (int, nullable for no limit), download_count (int, default 0), created_at, created_by (user_id for the owner, can be derived via content->user but storing might ease queries). Possibly an is_active flag (or we infer active by not expired and not revoked).
+Relationships:
+	•	Belongs to Content (and thereby one User).
+	•	(We won’t have a direct user relationship if we can get via content, but storing user_id is optional redundancy.)
+	•	Reminder (reminders table): Represents a scheduled reminder for a content.
+Fields: id, user_id, content_id, remind_at (timestamp), created_at. Possibly sent_at (to record if/when it was sent), or we could delete the row once sent. If we allow editing, keep until sent.
+Relationships:
+	•	Belongs to User (explicit) and Content. We likely store user_id for quick lookup in case content is deleted (then we know to remove related reminders).
+	•	One content might have one reminder at a time (we could enforce unique content_id in this table if we want to restrict to one active reminder per content).
+	•	OutboxEvent (outbox_events table): For search indexing sync.
+Fields: id, content_id, operation (enum: ‘CREATE’,‘UPDATE’,‘DELETE’), created_at, processed (boolean or a processed_at timestamp). Possibly a payload or content snippet, but we can just fetch content fresh when processing.
+Relationships:
+	•	Belongs to Content (if content still exists for create/update, for delete we might not have it, maybe store minimal data).
+	•	The Outbox processor will use this.
+	•	Stats: We can have a few tables or a polymorphic one:
+	•	DailyStat (user_stats_daily): user_id, date, new_content_count, content_views_count, etc.
+	•	WeeklyStat, MonthlyStat similarly. Or one table user_stats with columns for period (day/week/month) and an identifier (date or week number, etc.).
+	•	For simplicity: user_stats_daily, user_stats_weekly, user_stats_monthly. Each with user_id and period and the metrics.
+	•	AI Data: We may not need separate table. We can store AI results in the Content table:
+	•	summary (text) and maybe a auto_tags (which we might have already in Tag relationship).
+	•	If we wanted to keep history or more details, a separate content_ai_analysis table could store the raw output or confidence, but that’s likely overkill. So not needed initially.
+
+Relationships Recap: A User has many Categories; a Category has many Content items; a Content can have many Tags (and a Tag can label many Contents); a Content has many ShareLinks; a Content can have at most one Reminder at a time (one-to-one or one-to-many if multiple allowed); each ShareLink and Reminder is linked back to one content (and implicitly one user). Stats records tie to one User (aggregated data, no direct link to content in those). The OutboxEvent helps integrate content with search indexing.
+
+All data is isolated per user; there are no cross-user relationships in this single-user design. If multi-user in future, we’d ensure user_id present in content, tag, etc., and queries always filtered.
+
+Tasks
+
+Finally, here is a breakdown of development tasks derived from the above requirements. Each task corresponds to a major feature or component that needs to be implemented in the backend:
+
+TASK: Project Setup and Configuration – Set up the Spring Boot project with Gradle (Kotlin DSL). Include dependencies for PostgreSQL (JPA or Spring Data JDBC), MinIO (S3 client library), MeiliSearch (HTTP client or SDK), AWS SES (JavaMail or AWS SDK), JWT (library for token generation/validation), and Argon2/BCrypt (for password hashing). Establish configuration properties (DB connection, MinIO endpoint & keys, MeiliSearch URL & key, AWS SES creds, etc.). Ensure the project builds and runs with an initial health check endpoint.
+
+TASK: User Authentication (Sign-Up/Login/JWT) Implementation – Implement user registration, login, and logout. Create the User entity and repository. Implement the POST /auth/signup logic (validation, hash password, save user) and POST /auth/login (authenticate credentials, issue JWT). Configure JWT signing (with a secret key) and a filter or interceptor to handle JWT verification on protected endpoints. Implement logout logic (if using refresh tokens or simply handle client-side). Validate inputs and handle errors (e.g., duplicate username/email).
+
+TASK: Password Reset via Email (SES Integration) – Implement the password reset flow. Generate a PasswordReset token (entity to store token, user, expiry). Implement password-reset-request endpoint to create a token and send an email via AWS SES to the user with the reset link. Use a templated email with a link containing the token. Implement password-reset-confirm endpoint to validate the token and update the user’s password (after hashing the new password). Make sure to handle token expiration and one-time use. Configure AWS SES client (possibly using AWS SDK or SMTP if simpler) and verify that emails can be sent (in dev, could use a stub or log the link).
+
+TASK: Category CRUD & Sorting – Implement endpoints for category management: create, rename, delete, list. Create Category entity and link to User. Ensure that deleting a category also deletes or handles its content (for now, cascade delete content in the database or manage in service logic). Implement sorting: support query param in list API to sort by name, creation date, update date, or number of views (this may involve a JOIN or a computed field of content views sum, we might skip view-based sort if not trivial). Also implement custom ordering: add order_index field and an endpoint to update order of categories. The list API should respect order_index when sort=custom. Include category info like content counts in list (either via a SQL join/subquery or calculate in service).
+
+TASK: Content CRUD (Photo/Link/Note) & File Storage Integration – Implement creation, reading, updating, and deletion of content items. Create Content entity with polymorphic fields for different types. Key points:
+	•	For photo content: integrate with MinIO. Implement an endpoint to get presigned upload URLs from MinIO (using MinIO’s Java client or AWS SDK S3 client configured to MinIO). Ensure the uploaded file is accessible (presigned GET for download when needed). Save the file path/URL in the Content record.
+	•	For link content: simply save the URL and optional metadata.
+	•	For note content: save the text (possibly in the same field used for “body”).
+	•	Implement GET /content/{id} to retrieve content details (including generating a presigned download URL for files if needed, or set up a route to serve files).
+	•	Handle tagging: if tags are provided on create or update, associate them (create Tag entries or just save strings).
+	•	Ensure that retrieving content or listing content increments view count appropriately.
+	•	Implement content deletion: if type is photo, delete the file from MinIO; if link or note, just remove DB entry. Use transactions as needed to maintain consistency.
+	•	Also implement pin/unpin logic: a field is_pinned and include it in create/update. Possibly a separate endpoint or via update.
+	•	Validate inputs (e.g., for file upload, allowed types) and handle errors (MinIO connection issues, etc.).
+
+TASK: View Count & Bookmark Feature – (This is an extension of content but highlighting usage tracking) Ensure that each content’s view count is incremented on access ￼. This likely means in the service method for GET content (and share link access) we increment a counter and save. Make sure this doesn’t cause heavy writes on frequent access (we can accept eventual consistency or throttle if needed, but initially a simple increment each time is okay). Implement the favorite/bookmark (pin) feature: allow user to mark content as pinned and store it. Update content listing queries to sort or filter pinned items (e.g., always return pinned items first in a category listing, or have a separate endpoint to fetch all pinned items across categories for a “Bookmarks” page). Ensure pin/unpin actions are protected and only affect the user’s own content.
+
+TASK: Shareable Link Generation & Management – Implement the sharing functionality. Create ShareLink entity and repository. Implement POST /share to create a new share link:
+	•	Generate a random token (use a secure random generator).
+	•	Save ShareLink with content reference, token, expiration (calculate expires_at from days input), max_downloads, etc.
+	•	Return the token/URL to user.
+Implement GET /share (list links) so user can see and possibly manage their links. Implement DELETE /share/{id} to revoke links (mark as revoked or delete the row).
+Implement the public access handler for /share/{token}:
+	•	Look up token, check conditions (expiry, count, etc.), then:
+	•	If content is a file: get a presigned download URL from MinIO and redirect (or stream file data with proper headers).
+	•	If content is text or link: generate a simple HTML response or a JSON. Possibly, for simplicity, return a basic HTML page with the note text or a link for the URL (with target=_blank).
+	•	Increment download count and content view count if access is granted. If conditions fail, return an error page (HTML saying “Link expired or invalid”).
+Add appropriate logging or monitoring for share accesses (optional). Also, ensure that the share token URL uses the configured server domain; maybe store or derive the full URL.
+
+TASK: Search Integration (MeiliSearch) & Indexing – Set up MeiliSearch usage:
+	•	Configure a MeiliSearch index (per user or single index) and ensure it’s ready (this might be done programmatically on app startup or manually).
+	•	Implement the Outbox pattern: create OutboxEvent entity/table. Whenever content is created/updated/deleted, in the same transaction or shortly after, insert an outbox event. Possibly use Spring events or directly call an OutboxService to record events.
+	•	Implement a background process (could use @Scheduled to run every few seconds, or a dedicated thread) to process outbox events:
+	•	Fetch unprocessed events, for each:
+	•	If create/update: fetch the content data and send an update to MeiliSearch (e.g. using MeiliSearch Java client or HTTP call to add documents). The document should include id, userId, title, body, tags, etc. If user uses a single index, include userId as a filter attribute.
+	•	If delete: send a delete document command to MeiliSearch for that content ID.
+	•	Mark the outbox event as processed (or remove it).
+	•	Implement the GET /search API to accept query and filters, call MeiliSearch’s search API (with appropriate filter for userId if needed), and return results. Parse the Meili response to our format. Include highlighting if needed (maybe not initially).
+	•	Test that adding content leads to it appearing in search results after short delay. Also test deletion removes from index.
+	•	Make sure to handle MeiliSearch exceptions (if the service is down, etc., perhaps retry later or log errors).
+	•	Configure searchableAttributes = [“title”, “body”, “tags”] and possibly make tags and category filterable. Also configure an ngram tokenizer if needed for partial search of Korean and English (MeiliSearch has a setting for word segmentation; we might need to set the language to something or use the Meili default which may already handle some partial matching).
+	•	Ensure search results only return the user’s own documents – if using per user index, it’s naturally isolated; if single index, always apply filter: userId = X in the search query.
+
+TASK: Reminders & Scheduled Notifications – Implement the reminder functionality:
+	•	Create Reminder entity and CRUD (excluding update maybe).
+	•	Implement POST /reminders to save a new reminder (check that the user owns the content, and the remind_at is in the future). Possibly, if a reminder for that content already exists, decide whether to allow multiple or replace it.
+	•	Implement listing and deletion of reminders.
+	•	Setup the scheduler: using Spring’s @Scheduled. Possibly a cron expression like @Scheduled(cron = "0 * * * * *") for every minute, or even every 10 seconds for quick response (but every minute is fine for reminders).
+	•	In the scheduled job, query the reminders table for any entries where remind_at <= now and that are not yet sent. For each:
+	•	Send an email via SES to the user’s email with the reminder. Use a nice subject like “MOAPIN Reminder: {content title}” and body “It’s time to revisit your content ‘{title}’. Login to MOAPIN to check it.” Maybe include a direct link to open the app.
+	•	Mark the reminder as sent (could delete it or set a flag sent_at). To keep history, maybe set a sent_at timestamp and exclude sent ones from active queries.
+	•	Implement the mark-as-reviewed feature: this could be simply a field on Content (is_reviewed). When a user opens the content from the reminder and clicks “Mark as reviewed”, call the mark-reviewed endpoint which sets that field true. The UI can then show a checkmark on that item.
+	•	Possibly, if is_reviewed is true, the system might automatically remove any future reminders for that content or treat them differently (not specified, but makes sense that once reviewed, it’s considered done).
+	•	Handle timezones: ensure when saving remind_at, if front-end sends as local time without TZ, assume KST. We can store everything in UTC internally but convert properly. Our scheduler running on server (assuming server on KST or convert).
+	•	Test by creating a reminder with a near-future time and verifying an email is received (in dev, perhaps log the email instead of actually sending if not configured).
+	•	Also ensure to cancel reminders if content is deleted (i.e. add cascade delete or manually delete reminders when a content is removed).
+
+TASK: Statistics Aggregation (Daily/Weekly/Monthly) – Implement scheduled jobs to compute usage stats and expose them via API:
+	•	Determine metrics: likely at least new content count and total views per period. Possibly total content count as of that day, etc.
+	•	Implement a job (using @Scheduled) that runs nightly at 02:00 KST:
+	•	Compute the previous day’s metrics for each user (or specifically for the logged-in user if we assume one user? But multi-user scenario possible, so do for all). We can gather all user IDs, or simply do it per user easily since each user is isolated:
+	•	Count how many contents were created between yesterday 00:00 and 23:59.
+	•	Sum up how many content views were recorded yesterday (we might have to record view events or use difference in counts – simpler: maybe store in content a last_view_date and we can count how many increments happened, but that’s not easily queryable unless we logged every view. Alternatively, view_count is cumulative; we might not break it down per day unless we log it. Perhaps we decide to log each view or at least increment with a date in a separate table for detailed tracking. That’s complex; we can approximate by just using content’s updatedAt if view_count changed? This is tricky to get daily views without a log.)
+	•	For simplicity, we might just track new content. The requirement did explicitly mention “usage trends, activity history” which implies views or usage frequency.
+	•	As a simpler approach, we will maintain a ViewLog table where each entry is (contentId, date, maybe just date and count). Whenever a view happens, also record an entry for that day. But this could be heavy. Alternatively, not do per view logging; just focus on content creation as activity.
+	•	However, “활동 내역” implies maybe tracking actions like content added or maybe just use content created count as activity.
+	•	We’ll assume basic metrics: new content count per day, and maybe total content count at end of day (which goes up as user adds).
+	•	Save the daily stat (date, user, new_count, etc.).
+	•	Weekly job (maybe every Monday) to aggregate last 7 days new content (or just sum last 7 daily entries).
+	•	Monthly job (1st of month) to aggregate last month.
+	•	Alternatively, compute on request: On GET /stats/daily, just query content table with date filters. But that might be fine given moderate data. We can do that actually:
+	•	For each day in range, do a count of content where created_at in that day, and similarly count maybe content where created_at <= that day (cumulative total). This might be fine for small ranges, but heavy for long. Storing precomputed is okay.
+	•	Implement the Stats API to fetch the data:
+	•	Possibly read from the stats tables if we populated them. Or dynamically compute if not stored.
+	•	Ensure the data is returned sorted by date and covering the requested range.
+	•	Provide data for graphs: e.g. for each day record the number of new content and maybe total content so far.
+	•	If we want to visualize “usage trend” as in views, we might need to rethink how to track views daily. One approach: each day at 02:00, note the total views (sum of all content view_count) for the user and subtract yesterday’s to get how many views occurred. We can do that:
+	•	Keep last total views count in user_stats_daily as well. For example, user has total views (sum of content view_count) = X at end of day. Next day difference X2 - X1 = views that day.
+	•	This requires storing total view count each day. We can do: daily_stat.total_views_cumulative.
+	•	Then front-end can derive daily views by diffing consecutive days if needed.
+	•	Focus on delivered requirement: provide daily/weekly/monthly aggregates. We interpret that primarily as content counts and such.
+	•	Ensure timezone alignment when grouping by day (if computing via SQL, use AT TIME ZONE 'Asia/Seoul' if needed for created_at).
+	•	Test stats generation by creating some content and triggering the job or calling the API with a date range including those.
+
+TASK: AI Summarization and Tagging Integration – Implement the AI features in the backend:
+	•	Choose an approach for the internal model: possibly integrate a small library or a simple algorithm for summarization (maybe gensim for keywords, etc.) – since using a heavy model might be beyond scope, we can simulate or plan for hooking one in.
+	•	Implement an AI Service component that has methods like generateSummary(contentText) and suggestTags(contentText). For now, these could do very basic things (like return the first sentence as summary, or pick out nouns as tags) just as a placeholder, or if allowed, we could call an open-source model.
+	•	Integrate external API option: for example, if OpenAI is used, use their client with the API key. Possibly call gpt-3.5-turbo with a prompt to summarize or extract tags from the text. This requires network access and cost, so it’s gated by a flag.
+	•	On content creation (after saving to DB), trigger the AI analysis asynchronously:
+	•	This could be done via an ApplicationEvent (Spring event when content created) or just after save in the same request (but better not to delay response, so spawn a new thread or use a task executor).
+	•	The AI Service gets the content’s text (for photo content, we skip as no text; for links, we might not fetch the webpage due to complexity, so skip unless user provided description; mainly notes).
+	•	It generates a summary and tags. Then update the content record: set the summary field, and merge the suggested tags into the tags list (marking them in some way if needed, but likely just add them).
+	•	Possibly, avoid duplicating tags the user already provided.
+	•	Provide the summary and tags in the response when the user fetches content details. The UI can display the summary (maybe titled “AI Summary”) and show tags (with maybe a highlight if they were AI-suggested vs user-added).
+	•	Implement toggling off external: if USE_EXTERNAL_AI=false, then the external call is skipped; if true and internal is used first, maybe always do external for better result. Or we do internal first, and if we deem result not good (hard to automate), simpler: if external allowed, use it directly for now.
+	•	Ensure that if external API fails or times out, we catch exceptions so it doesn’t crash the app. Possibly log the error.
+	•	If performance is a concern, heavy AI tasks could be queued or rate-limited. But given likely usage, on creation only, it should be fine.
+	•	(Optional) If time, implement POST /content/{id}/ai-analyze for manual trigger. Otherwise, not necessary.
+	•	Test with some sample texts to see that summary and tags are generated and saved.
+
+Each of these tasks addresses a major chunk of the requirements. They should be implemented in roughly the above order (as later tasks often depend on earlier ones, e.g., content must exist before sharing or search can be done). Once completed, the MOAPIN backend will be feature-complete according to this PRD, and Taskmaster AI’s parse-prd can use these task definitions to guide the development process.
