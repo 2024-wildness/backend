@@ -72,8 +72,11 @@ public class ShareLinkService {
     @Transactional
     public void revokeLink(Long id, Authentication auth) {
         ShareLink link = repository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (link.getContent().getCategory() != null && !link.getContent().getCategory().getUser().getUsername().equals(auth.getName())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        if (link.getContent().getCategory() != null) {
+            if (link.getContent().getCategory().getUser() == null || 
+                !link.getContent().getCategory().getUser().getUsername().equals(auth.getName())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
         }
         link.setRevoked(true);
         repository.save(link);
