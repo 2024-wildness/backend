@@ -27,6 +27,9 @@ public class Category {
     @Column(name = "order_index")
     private Integer orderIndex;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private java.time.Instant createdAt;
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -55,11 +58,23 @@ public class Category {
         this.orderIndex = orderIndex;
     }
 
+    public java.time.Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(java.time.Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
     public User getUser() {
         return user;
     }
 
     public void setUser(User user) {
         this.user = user;
+    }
+    @javax.persistence.PrePersist
+    void onCreate() {
+        this.createdAt = java.time.Instant.now();
     }
 }

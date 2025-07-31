@@ -39,4 +39,13 @@ public class CategoryController {
         Category cat = categoryService.getCategory(id, auth);
         return ResponseEntity.ok(cat);
     }
+
+    @GetMapping
+    public ResponseEntity<java.util.List<com.madiest.moapin.category.payload.CategoryListResponse>> listCategories(
+            org.springframework.web.bind.annotation.RequestParam(value = "sort", defaultValue = "createdDate") String sort,
+            Authentication auth) {
+        java.util.List<com.madiest.moapin.category.payload.CategoryListResponse> list =
+                categoryService.listCategories(auth, sort);
+        return ResponseEntity.ok(list);
+    }
 }

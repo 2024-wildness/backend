@@ -45,4 +45,36 @@ public class CategoryService {
         }
         return category;
     }
+
+    @Transactional(readOnly = true)
+    public java.util.List<com.madiest.moapin.category.payload.CategoryListResponse> listCategories(
+            Authentication auth, String sort) {
+        com.madiest.moapin.auth.User user = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+        org.springframework.data.domain.Sort sortOrder;
+        switch (sort) {
+            case "name":
+                sortOrder = org.springframework.data.domain.Sort.by("name");
+                break;
+            case "custom":
+                sortOrder = org.springframework.data.domain.Sort.by("orderIndex");
+                break;
+            case "createdDate":
+            default:
+                sortOrder = org.springframework.data.domain.Sort.by("createdAt");
+        }
+        java.util.List<Category> categories =
+                categoryRepository.findByUser(user, sortOrder);
+        java.util.List<com.madiest.moapin.category.payload.CategoryListResponse> result = new java.util.ArrayList<>();
+        for (Category cat : categories) {
+            result.add(new com.madiest.moapin.category.payload.CategoryListResponse(
+                    cat.getId(),
+                    cat.getName(),
+                    cat.getOrderIndex(),
+                    cat.getCreatedAt(),
+                    0L
+            ));
+        }
+        return result;
+    }
 }
