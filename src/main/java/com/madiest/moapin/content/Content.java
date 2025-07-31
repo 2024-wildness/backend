@@ -25,6 +25,9 @@ public abstract class Content {
     @Column(name = "is_pinned", nullable = false)
     private boolean isPinned = false;
 
+    @Column(name = "is_reviewed", nullable = false)
+    private boolean reviewed = false;
+
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = true)
     private Category category;
@@ -56,6 +59,14 @@ public abstract class Content {
 
     public void setPinned(boolean pinned) {
         isPinned = pinned;
+    }
+
+    public boolean isReviewed() {
+        return reviewed;
+    }
+
+    public void setReviewed(boolean reviewed) {
+        this.reviewed = reviewed;
     }
 
     public Category getCategory() {

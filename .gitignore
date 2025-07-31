@@ -37,3 +37,8 @@ out/
 .vscode/
 
 .env
+node_modules/
+.taskmaster/config.json
+.taskmaster/state.json
+package-lock.json
+package.json

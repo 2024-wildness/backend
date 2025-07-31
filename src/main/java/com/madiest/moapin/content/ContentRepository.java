@@ -11,4 +11,11 @@ public interface ContentRepository extends JpaRepository<Content, Long> {
      * ordered with pinned items first and then by creation time descending.
      */
     java.util.List<Content> findByCategoryUserUsernameOrderByPinnedDescCreatedAtDesc(String username);
+
+    default void markReviewed(Long id) {
+        findById(id).ifPresent(c -> {
+            c.setReviewed(true);
+            save(c);
+        });
+    }
 }
