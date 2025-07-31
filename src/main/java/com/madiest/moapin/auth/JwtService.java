@@ -31,4 +31,26 @@ public class JwtService {
                 .signWith(SignatureAlgorithm.HS256, jwtSecret.getBytes())
                 .compact();
     }
+
+    /**
+     * Validate the JWT token signature and expiration.
+     */
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser().setSigningKey(jwtSecret.getBytes()).parseClaimsJws(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Parse claims from the token for authentication.
+     */
+    public Claims parseClaims(String token) {
+        return Jwts.parser()
+                .setSigningKey(jwtSecret.getBytes())
+                .parseClaimsJws(token)
+                .getBody();
+    }
 }
