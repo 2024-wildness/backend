@@ -40,6 +40,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.amqp:spring-rabbit-stream'
     implementation 'org.springframework.modulith:spring-modulith-events-api'
     implementation 'org.springframework.modulith:spring-modulith-starter-core'
