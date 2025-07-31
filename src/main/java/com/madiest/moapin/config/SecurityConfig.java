@@ -38,6 +38,7 @@ public class SecurityConfig {
         http.csrf().disable()
             .authorizeRequests()
                 .antMatchers("/api/auth/**", "/api/test/public", "/actuator/health").permitAll()
+                .antMatchers(org.springframework.http.HttpMethod.GET, "/api/share/**").permitAll()
                 .anyRequest().authenticated()
             .and()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
