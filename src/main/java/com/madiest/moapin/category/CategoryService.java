@@ -100,4 +100,13 @@ public class CategoryService {
             categoryRepository.save(category);
         }
     }
+
+    /**
+     * Delete a category and cascade removal of associated content.
+     */
+    @Transactional
+    public void deleteCategory(Long id, Authentication auth) {
+        Category category = getCategory(id, auth);
+        categoryRepository.delete(category);
+    }
 }

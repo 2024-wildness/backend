@@ -65,4 +65,12 @@ public class CategoryController {
         categoryService.reorderCategories(orderedIds, auth);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCategory(
+            @PathVariable Long id,
+            Authentication auth) {
+        categoryService.deleteCategory(id, auth);
+        return ResponseEntity.noContent().build();
+    }
 }
