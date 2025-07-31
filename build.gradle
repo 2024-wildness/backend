@@ -75,6 +75,8 @@ dependencies {
 dependencyManagement {
     imports {
         mavenBom "org.springframework.modulith:spring-modulith-bom:${springModulithVersion}"
+        // AWS SDK 전체 버전을 한 번에 맞춰 줍니다
+        mavenBom "software.amazon.awssdk:bom:2.32.5"   // 최신 안정 버전(2025-07-21)
     }
 }
 
