@@ -11,6 +11,7 @@ app:
     endpoint: ${MINIO_ENDPOINT}
     access-key: ${MINIO_ACCESS_KEY}
     secret-key: ${MINIO_SECRET_KEY}
+    bucket: ${MINIO_BUCKET}
   search:
     host: ${MEILISEARCH_HOST}
     api-key: ${MEILISEARCH_API_KEY}

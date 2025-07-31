@@ -1,0 +1,43 @@
+# Task ID: 1
+# Title: Project Setup and Core Configuration
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Initialize the Spring Boot project using Gradle (Kotlin DSL) and configure all essential dependencies and external service connections.
+# Details:
+Set up dependencies for Java 24/Spring Boot, PostgreSQL, MinIO, MeiliSearch, AWS SES, JWT, and password hashing (Argon2/BCrypt). Establish externalized configuration for API keys, database connections, and feature toggles via environment variables. Create an initial health check endpoint.
+
+# Test Strategy:
+Verify the project builds successfully with `./gradlew build`. The application should start without errors. The health check endpoint (`/actuator/health`) should return a 200 OK status. Configuration properties for external services should be loadable from environment variables.
+
+# Subtasks:
+## 1. Initialize Gradle Project with Spring Boot [pending]
+### Dependencies: None
+### Description: Generate a new Spring Boot project using the Spring Initializr with Gradle (Kotlin DSL) as the build system. Set the project's Java version to 24 and include the foundational 'Spring Web' and 'Spring Boot Actuator' dependencies.
+### Details:
+Use start.spring.io or an IDE's integrated tool to create the project structure. Ensure the `build.gradle.kts` and `settings.gradle.kts` files are correctly configured for Java 24.
+
+## 2. Add and Configure Data and Security Dependencies [pending]
+### Dependencies: None
+### Description: Integrate dependencies for data persistence and security. This includes the PostgreSQL driver, Spring Data JPA, a JWT library (e.g., jjwt-api), and a password hashing library (e.g., Spring Security Crypto for BCrypt/Argon2).
+### Details:
+Add the necessary dependencies to the `build.gradle.kts` file. This step focuses only on adding the libraries, not on their full configuration yet.
+
+## 3. Add External Service Client Dependencies [pending]
+### Dependencies: None
+### Description: Incorporate the client libraries required to communicate with all specified external services: MinIO, MeiliSearch, and AWS SES.
+### Details:
+Find the appropriate Maven coordinates for the official or recommended Java clients for MinIO, MeiliSearch, and AWS SDK for Java v2 (SES). Add these to the `build.gradle.kts` file.
+
+## 4. Implement Externalized Configuration Properties [pending]
+### Dependencies: None
+### Description: Create type-safe configuration classes using `@ConfigurationProperties` to manage connection details, API keys, and feature toggles. Configure the application to load these values from environment variables.
+### Details:
+Create dedicated Kotlin data classes for PostgreSQL, MinIO, MeiliSearch, AWS, and JWT settings. In `application.properties`, use placeholders like `db.url=${DB_URL}` to map environment variables to these properties.
+
+## 5. Create and Verify Initial Health Check Endpoint [pending]
+### Dependencies: None
+### Description: Configure and enable the Spring Boot Actuator's health check endpoint. This will serve as the primary mechanism to confirm that the application context loads correctly and the server is responsive.
+### Details:
+In `application.properties`, set `management.endpoints.web.exposure.include=health`. Create a simple main application class that can be run. The application should now be able to start if all configurations are correctly defined (even if connections fail).
+

@@ -1,0 +1,11 @@
+# Task ID: 8
+# Title: Implement Scheduled Reminders and Notifications
+# Status: pending
+# Dependencies: 2, 4
+# Priority: low
+# Description: Develop a feature for users to set reminders on content, with email notifications sent at the scheduled time.
+# Details:
+Create a Reminder entity. Implement APIs for users to set, view, and cancel reminders. Use Spring's `@Scheduled` to run a job periodically that checks for due reminders. For each due reminder, send a notification email via AWS SES. Implement the 'mark as reviewed' feature, allowing users to flag content they have re-checked after a reminder. Ensure all scheduling operates in the Asia/Seoul timezone.
+
+# Test Strategy:
+Create a reminder for the near future and verify that an email is sent at the correct time. Test listing and canceling reminders. Test the 'mark as reviewed' endpoint and verify the content's status is updated. Ensure reminders are properly handled in the Asia/Seoul timezone.

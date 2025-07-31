@@ -1,0 +1,352 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 21,
+        "title": "Project Setup and Configuration",
+        "description": "Initialize the Spring Boot project with Gradle (Kotlin DSL) and configure all necessary dependencies and external service connections.",
+        "details": "Set up the project with Java 24 and Spring Boot. Configure Gradle with the Kotlin DSL. Add dependencies for PostgreSQL, MinIO, MeiliSearch, AWS SES, JWT, and Argon2/BCrypt. Establish configuration via environment variables for database connections, API keys (MinIO, MeiliSearch, SES), and JWT secret. Create a basic health check endpoint.",
+        "testStrategy": "Verify the project builds successfully using `./gradlew build`. Run the application and access the health check endpoint (e.g., `/actuator/health`) to confirm it's running. Check that configurations for external services are loaded correctly from environment variables during startup.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize Spring Boot Project with Gradle (Kotlin DSL)",
+            "description": "Generate the initial project structure using Spring Initializr, specifying Java 24, Spring Boot, and Gradle with the Kotlin DSL.",
+            "dependencies": [],
+            "details": "Use start.spring.io to create the project skeleton. Include `spring-boot-starter-web` and `spring-boot-starter-actuator` as initial dependencies. Ensure the project can be built using `./gradlew build`.\n<info added on 2025-07-31T10:45:47.773Z>\nVerify that the `build.gradle.kts` file includes the `spring-boot-starter-web` and `spring-boot-starter-actuator` dependencies and that the Java version is set to 24. Run `./gradlew build` to confirm a successful build, noting any missing configurations or adjustments needed.\n</info added on 2025-07-31T10:45:47.773Z>\n<info added on 2025-07-31T10:48:37.387Z>\nCorrection: The project is using the Groovy DSL. Verify that `build.gradle` (not `build.gradle.kts`) includes the `spring-boot-starter-web` and `spring-boot-starter-actuator` dependencies and that the Java toolchain is set to 24.\n</info added on 2025-07-31T10:48:37.387Z>\n<info added on 2025-07-31T10:49:42.522Z>\nBuild fails at code generation due to an empty GraphQL schema directory. The DGS codegen plugin must be disabled or placeholder schema files must be provided to allow the build to succeed.\n</info added on 2025-07-31T10:49:42.522Z>",
+            "status": "done",
+            "testStrategy": "Verify the project builds successfully with `./gradlew build`."
+          },
+          {
+            "id": 2,
+            "title": "Add Dependencies for External Services and Security",
+            "description": "Update the `build.gradle.kts` file to include all necessary dependencies for database connectivity, object storage, search, email, and security.",
+            "dependencies": [],
+            "details": "Add Gradle dependencies for PostgreSQL (JDBC driver), MinIO (AWS S3 SDK), MeiliSearch (Java client), AWS SES (AWS SDK v2), JWT (`io.jsonwebtoken:jjwt-api`), and password hashing (`spring-boot-starter-security` for BCrypt/Argon2).\n<info added on 2025-07-31T10:50:21.717Z>\nThe project's build script will be updated from the Kotlin DSL (`build.gradle.kts`) to the Groovy DSL (`build.gradle`).\n\nModify `build.gradle` to include the following dependencies:\n\n```groovy\nplugins {\n    id 'org.springframework.boot' version '3.2.5'\n    id 'io.spring.dependency-management' version '1.1.4'\n    id 'org.jetbrains.kotlin.jvm' version '1.9.23'\n    id 'org.jetbrains.kotlin.plugin.spring' version '1.9.23'\n}\n\ngroup = 'com.example'\nversion = '0.0.1-SNAPSHOT'\n\njava {\n    sourceCompatibility = '21'\n}\n\nrepositories {\n    mavenCentral()\n}\n\ndependencyManagement {\n    imports {\n        mavenBom \"software.amazon.awssdk:bom:2.25.31\"\n    }\n}\n\ndependencies {\n    // Core Spring Boot\n    implementation 'org.springframework.boot:spring-boot-starter-web'\n    implementation 'org.springframework.boot:spring-boot-starter-actuator'\n    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'\n    implementation 'org.jetbrains.kotlin:kotlin-reflect'\n\n    // Security (Password Hashing & JWT)\n    implementation 'org.springframework.boot:spring-boot-starter-security'\n    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'\n    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'\n    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'\n\n    // Database\n    runtimeOnly 'org.postgresql:postgresql'\n\n    // Search\n    implementation 'com.meilisearch.sdk:meilisearch-java:0.12.0'\n\n    // AWS SDKs for MinIO (S3) and SES\n    implementation 'software.amazon.awssdk:s3'\n    implementation 'software.amazon.awssdk:sesv2'\n\n    // Testing\n    testImplementation 'org.springframework.boot:spring-boot-starter-test'\n    testImplementation 'org.springframework.security:spring-security-test'\n}\n\ntasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile) {\n    kotlinOptions {\n        freeCompilerArgs += '-Xjsr305=strict'\n        jvmTarget = '21'\n    }\n}\n\ntasks.withType(Test) {\n    useJUnitPlatform()\n}\n```\n</info added on 2025-07-31T10:50:21.717Z>\n<info added on 2025-07-31T10:53:07.036Z>\nCorrection: The project uses the Groovy DSL. Modify build.gradle (not build.gradle.kts) to add dependencies for PostgreSQL (org.postgresql:postgresql), MinIO (software.amazon.awssdk:s3), MeiliSearch (com.meilisearch.sdk:meilisearch-java), AWS SES (software.amazon.awssdk:sesv2), JWT (io.jsonwebtoken:jjwt-api and its runtime implementations), ensuring spring-boot-starter-security is already included and version alignment with Spring Boot BOM.\n</info added on 2025-07-31T10:53:07.036Z>",
+            "status": "done",
+            "testStrategy": "Run `./gradlew dependencies` to confirm all libraries are resolved without conflicts. The project must still compile successfully."
+          },
+          {
+            "id": 3,
+            "title": "Establish Configuration via Environment Variables",
+            "description": "Configure the application to load all secrets and external service connection details from environment variables.",
+            "dependencies": [],
+            "details": "Create a `@ConfigurationProperties` class to map environment variables for the PostgreSQL connection, MinIO/MeiliSearch/SES API keys and endpoints, and the JWT secret. Use placeholders in `application.yml` (e.g., `url: ${POSTGRES_URL}`).",
+            "status": "done",
+            "testStrategy": "Write a unit test that loads the Spring context with mock environment variables and asserts that the configuration properties bean is populated correctly."
+          },
+          {
+            "id": 4,
+            "title": "Define Spring Beans for Service Clients",
+            "description": "Create the necessary Spring `@Bean` definitions to provide injectable clients for interacting with MinIO, MeiliSearch, and AWS SES.",
+            "dependencies": [],
+            "details": "Implement `@Configuration` classes that use the properties from subtask 3 to build and provide singleton beans for `MinioClient`, MeiliSearch `Client`, and `SesAsyncClient`. The PostgreSQL `DataSource` will be auto-configured by Spring Boot.",
+            "status": "done",
+            "testStrategy": "Write a component test that `@Autowired` each client bean to ensure they are successfully created and available in the application context."
+          },
+          {
+            "id": 5,
+            "title": "Configure and Expose Basic Health Check Endpoint",
+            "description": "Enable and expose the Spring Boot Actuator health endpoint to provide a simple way to verify that the application is running.",
+            "dependencies": [],
+            "details": "In `application.yml`, set `management.endpoints.web.exposure.include=health` to expose the endpoint. Ensure the `spring-boot-starter-actuator` dependency is present.",
+            "status": "done",
+            "testStrategy": "Start the application and send a GET request to `/actuator/health`. Verify the response is HTTP 200 OK with a body containing `{\"status\":\"UP\"}`."
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "title": "Implement User Authentication and JWT",
+        "description": "Develop the user registration, login, and JWT-based authentication system.",
+        "details": "Create the `User` entity and repository. Implement the `/api/auth/signup` endpoint for new user registration, including validation for unique username/email and secure password hashing (Argon2/BCrypt). Implement the `/api/auth/login` endpoint to authenticate users and issue a JWT. Set up a security filter to validate JWTs on all protected API endpoints.",
+        "testStrategy": "Unit test the user service for registration and login logic. Integration test the signup and login endpoints. Test protected endpoints to ensure they return 401 Unauthorized without a valid JWT and 200 OK with a valid token.",
+        "priority": "high",
+        "dependencies": [
+          21
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create User Entity and Repository",
+            "description": "Define the User data model with necessary fields (ID, username, email, password) and create the corresponding JPA repository for database interactions.",
+            "dependencies": [],
+            "details": "Create a `User` class annotated with `@Entity`. Include fields for `id`, `username`, `email`, and `password`. Add constraints like `@Column(unique=true, nullable=false)` for username and email. Create a `UserRepository` interface that extends `JpaRepository`.",
+            "status": "done",
+            "testStrategy": "Unit test the repository layer using an in-memory database (e.g., H2) to verify that user creation, retrieval by username/email, and existence checks function correctly."
+          },
+          {
+            "id": 2,
+            "title": "Implement User Registration Endpoint",
+            "description": "Develop the `/api/auth/signup` endpoint to handle new user registration, including input validation and secure password hashing.",
+            "dependencies": [
+              "22.1"
+            ],
+            "details": "Create a controller method for `POST /api/auth/signup`. Implement a service layer that validates the request (e.g., unique username/email) and uses a `PasswordEncoder` (BCrypt or Argon2) to hash the user's password before saving it to the database via the `UserRepository`.",
+            "status": "done",
+            "testStrategy": "Integration test the endpoint by sending valid registration data and expecting a 201 Created response. Test with duplicate usernames/emails to ensure a 409 Conflict or 400 Bad Request is returned."
+          },
+          {
+            "id": 3,
+            "title": "Implement Login Endpoint and JWT Generation",
+            "description": "Develop the `/api/auth/login` endpoint to authenticate users based on their credentials and issue a signed JSON Web Token (JWT) upon success.",
+            "dependencies": [
+              "22.2"
+            ],
+            "details": "Create a controller method for `POST /api/auth/login`. Use Spring Security's `AuthenticationManager` to authenticate the user. Upon successful authentication, create a `JwtService` to generate a signed JWT containing user claims like username and roles.",
+            "status": "done",
+            "testStrategy": "Integration test the login endpoint with correct credentials to verify it returns a JWT. Test with incorrect credentials to ensure it returns a 401 Unauthorized status."
+          },
+          {
+            "id": 4,
+            "title": "Configure Spring Security and JWT Validation Filter",
+            "description": "Set up the main security configuration to protect API endpoints and implement a custom filter that intercepts requests to validate the JWT.",
+            "dependencies": [
+              "22.3"
+            ],
+            "details": "Create a `SecurityFilterChain` bean to configure HTTP security. Define public routes (`/api/auth/**`) and secure all other routes. Implement a `JwtAuthenticationFilter` that extends `OncePerRequestFilter` to extract the token from the 'Authorization' header, validate its signature and expiration, and set the user's authentication context.",
+            "status": "done",
+            "testStrategy": "Create a simple protected test endpoint. Unit test the JWT filter logic for token parsing and validation. Manually test the protected endpoint using a tool like Postman to ensure requests without a token are rejected with a 401/403 error."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Filter and Test Protected Endpoints",
+            "description": "Add the JWT authentication filter to the Spring Security filter chain and perform an end-to-end test of the authentication flow.",
+            "dependencies": [
+              "22.4"
+            ],
+            "details": "Register the `JwtAuthenticationFilter` within the `SecurityFilterChain`. Ensure it runs for every request to a protected resource. The filter should populate the `SecurityContextHolder` with the authenticated user's details if the token is valid.",
+            "status": "done",
+            "testStrategy": "Perform a full end-to-end test: 1) Register a user via `/signup`. 2) Log in via `/login` to receive a JWT. 3) Use the JWT as a Bearer token to access a protected endpoint. 4) Verify the endpoint returns a 200 OK status and can access the authenticated principal's information."
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "title": "Implement Password Reset via Email using AWS SES",
+        "description": "Create the full password reset flow, including token generation, email sending, and password update.",
+        "details": "Implement an endpoint to initiate a password reset, which generates a secure, time-limited token and stores it. Integrate with AWS SES to send an email containing a reset link with the token. Implement a second endpoint to verify the token and update the user's password securely after hashing it.",
+        "testStrategy": "Test the reset initiation endpoint to ensure an email is triggered (can use a mock SES client or a test email account). Test the reset confirmation endpoint with valid, invalid, and expired tokens. Verify the password hash is correctly updated in the database.",
+        "priority": "medium",
+        "dependencies": [
+          22
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 24,
+        "title": "Implement Category Management (CRUD and Sorting)",
+        "description": "Build the APIs for creating, reading, updating, deleting, and sorting user-specific categories.",
+        "details": "Create the `Category` entity linked to a `User`. Implement CRUD endpoints for `/api/categories`. Implement cascade deletion of content when a category is deleted. Add support for sorting by creation date, name, and a user-defined custom order using an `order_index` field. Include content count in the category list response.",
+        "testStrategy": "Write unit and integration tests for all CRUD operations. Test the list endpoint with different sorting parameters (`?sort=createdDate`, `?sort=custom`). Test the reordering endpoint and verify the custom order is respected. Test deletion to ensure associated content is also removed.",
+        "priority": "high",
+        "dependencies": [
+          22
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define Category Entity and Basic Create/Read Endpoints",
+            "description": "Create the core `Category` database entity and implement the API endpoints for creating a new category and retrieving a single category by its ID.",
+            "dependencies": [],
+            "details": "Define the `Category` entity with fields for `id`, `name`, `order_index`, and a many-to-one relationship to the `User` entity. Implement `POST /api/categories` to create a category and `GET /api/categories/{id}` to fetch one. Ensure new categories are correctly associated with the authenticated user.",
+            "status": "done",
+            "testStrategy": "Write unit tests for the entity definition and service logic. Add integration tests to verify category creation and retrieval for an authenticated user."
+          },
+          {
+            "id": 2,
+            "title": "Implement Category List Endpoint with Sorting and Content Count",
+            "description": "Develop the API endpoint to list all categories for the authenticated user, including sorting capabilities and a count of associated content items.",
+            "dependencies": [
+              "24.1"
+            ],
+            "details": "Implement `GET /api/categories`. Add support for query parameters for sorting: `?sort=name`, `?sort=createdDate`, and `?sort=custom` (which should use the `order_index` field). The JSON response for each category in the list must include a `contentCount` field.",
+            "status": "done",
+            "testStrategy": "Test the list endpoint to ensure it only returns categories for the logged-in user. Verify that each sorting parameter (`name`, `createdDate`, `custom`) works as expected. Check that the `contentCount` is accurate."
+          },
+          {
+            "id": 3,
+            "title": "Implement Category Update and Reordering Logic",
+            "description": "Implement the functionality to update a category's properties (like its name) and to change the custom sort order of all categories.",
+            "dependencies": [
+              "24.1"
+            ],
+            "details": "Implement `PUT /api/categories/{id}` to update a category's name. Create a dedicated endpoint, e.g., `PATCH /api/categories/reorder`, that accepts an ordered list of category IDs and updates their `order_index` fields to reflect the new sequence.",
+            "status": "done",
+            "testStrategy": "Test the `PUT` endpoint to confirm a category's name can be changed. Test the reordering endpoint by sending a new order and then fetching the list with `?sort=custom` to verify the order is applied correctly."
+          },
+          {
+            "id": 4,
+            "title": "Implement Deletion with Cascade to Associated Content",
+            "description": "Implement the endpoint for deleting a category, ensuring that all content items within that category are also deleted.",
+            "dependencies": [
+              "24.1"
+            ],
+            "details": "Implement `DELETE /api/categories/{id}`. The core logic must ensure that deleting a `Category` triggers the deletion of all associated `Content` entities. This can be configured via JPA/Hibernate annotations (e.g., `cascade = CascadeType.REMOVE`) or handled explicitly in the service layer.",
+            "status": "done",
+            "testStrategy": "Create a category with several content items. Delete the category via the API and then verify that the category and all its associated content items have been removed from the database."
+          },
+          {
+            "id": 5,
+            "title": "Finalize API and Write Comprehensive Integration Tests",
+            "description": "Conduct a final review of all category-related endpoints and write a full suite of integration tests to ensure robustness, security, and correctness.",
+            "dependencies": [
+              "24.1",
+              "24.2",
+              "24.3",
+              "24.4"
+            ],
+            "details": "Review all endpoints for consistent error handling and response structures. Write a complete integration test suite covering all CRUD operations, sorting, reordering, and cascade deletion. Ensure all endpoints properly enforce user-specific data access.",
+            "status": "done",
+            "testStrategy": "Execute the full integration test suite, including edge cases like trying to access another user's categories, deleting a non-existent category, and providing invalid sorting parameters."
+          }
+        ]
+      },
+      {
+        "id": 25,
+        "title": "Implement Content Management (CRUD, Storage, Pinning)",
+        "description": "Develop the core functionality for managing content items (Photo, Link, Note), including file storage with MinIO, view counting, and pinning.",
+        "details": "Create a polymorphic `Content` entity. For 'Photo' type, integrate with MinIO to generate presigned URLs for direct client uploads and downloads. Implement CRUD endpoints for all content types. Implement logic to increment a `view_count` on access. Implement the pinning feature by adding an `is_pinned` flag and ensuring pinned items are prioritized in listings.",
+        "testStrategy": "Test CRUD operations for each content type (Photo, Link, Note). Verify MinIO integration by uploading a file via a presigned URL and then retrieving it. Test that the view count increments correctly. Test pinning/unpinning and verify that list endpoints return pinned items first.",
+        "priority": "high",
+        "dependencies": [
+          24
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement Polymorphic Content Entity",
+            "description": "Create the base `Content` entity and its subclasses (`Photo`, `Link`, `Note`) using a single-table inheritance strategy. Define all required fields, including `view_count` and `is_pinned`.",
+            "dependencies": [],
+            "details": "Use JPA with `@Inheritance(strategy = InheritanceType.SINGLE_TABLE)` and `@DiscriminatorColumn`. The base `Content` class will contain common fields. Subclasses will define type-specific fields like `file_key` for Photo, `url` for Link, and `text_content` for Note.",
+            "status": "done",
+            "testStrategy": "Verify that the database schema is correctly generated. Write unit tests to persist and retrieve each of the three content types to ensure the polymorphic mapping works."
+          },
+          {
+            "id": 2,
+            "title": "Implement Core CRUD Endpoints",
+            "description": "Develop the basic REST API endpoints (Create, Read, Update, Delete) for managing content items. The creation endpoint should handle the different content types.",
+            "dependencies": [
+              "25.1"
+            ],
+            "details": "Create a `ContentController` with endpoints like `POST /api/content`, `GET /api/content/{id}`, `PUT /api/content/{id}`, and `DELETE /api/content/{id}`. The service layer will contain the business logic to handle operations for the different content types.",
+            "status": "done",
+            "testStrategy": "Test the CRUD operations for `Note` and `Link` types. The `Photo` creation will be a placeholder until MinIO is integrated. Test retrieval, update, and deletion for all types."
+          },
+          {
+            "id": 3,
+            "title": "Integrate MinIO for Photo Storage via Presigned URLs",
+            "description": "Configure the MinIO client and integrate it with the 'Photo' content type flow. Implement logic to generate presigned URLs for direct client uploads and secure downloads.",
+            "dependencies": [
+              "25.2"
+            ],
+            "details": "Modify the photo creation logic. The initial API call will generate and return a presigned URL for upload. A second endpoint will be required for the client to notify the server upon successful upload, which then creates the `Photo` entity in the database. The `GET` endpoint for a photo will return a presigned download URL.",
+            "status": "done",
+            "testStrategy": "Verify that a presigned upload URL is correctly generated. Simulate an upload and call the completion endpoint to confirm the `Photo` record is created. Test the `GET` endpoint to ensure a valid download URL is returned."
+          },
+          {
+            "id": 4,
+            "title": "Implement View Counting and Pinning Endpoints",
+            "description": "Add the logic to increment the `view_count` on access and an endpoint to toggle the `is_pinned` status of a content item.",
+            "dependencies": [
+              "25.2"
+            ],
+            "details": "In the service method for retrieving a single content item (`GET /api/content/{id}`), add logic to increment its `view_count`. Create a new endpoint, such as `POST /api/content/{id}/pin`, to toggle the boolean `is_pinned` flag.",
+            "status": "done",
+            "testStrategy": "Call the `GET` endpoint for an item and verify its `view_count` is incremented in the database. Test the pinning endpoint to confirm the `is_pinned` flag is correctly toggled on and off."
+          },
+          {
+            "id": 5,
+            "title": "Implement Prioritized Listing with Pinning",
+            "description": "Develop the content listing endpoint that retrieves all content for a user, ensuring that pinned items are prioritized and appear at the top of the list.",
+            "dependencies": [
+              "25.2",
+              "25.4"
+            ],
+            "details": "Implement a `GET /api/content` endpoint. The data retrieval logic in the repository should use a query that sorts results first by `is_pinned` in descending order, and then by another criterion like `created_at` descending.",
+            "status": "done",
+            "testStrategy": "Create multiple content items, pin one or two, and then call the list endpoint. Verify the response array has the pinned items at the beginning, followed by the unpinned items sorted correctly."
+          }
+        ]
+      },
+      {
+        "id": 26,
+        "title": "Implement Shareable Link Generation and Access",
+        "description": "Build the feature to generate secure, configurable, shareable links for content items.",
+        "details": "Create a `ShareLink` entity. Implement an API to generate a unique, unguessable token for a content item with optional expiration dates and download limits. Implement a public endpoint (`/share/{token}`) that validates the token and serves the content. Increment download and view counts on successful access. Implement APIs to list and revoke share links.",
+        "testStrategy": "Test link creation with different expiration/download limit settings. Access the public share URL to verify content delivery. Test access with expired, revoked, and maxed-out links to ensure they are correctly denied.",
+        "priority": "medium",
+        "dependencies": [
+          25
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 27,
+        "title": "Implement Search Integration with MeiliSearch",
+        "description": "Integrate MeiliSearch for full-text search, using an Outbox pattern for asynchronous indexing.",
+        "details": "Configure the MeiliSearch client. Implement the Outbox pattern by creating an `OutboxEvent` table to log content changes. Create a scheduled background job to process these events and update the MeiliSearch index accordingly. Implement the `/api/search` endpoint to query MeiliSearch, ensuring results are filtered by the authenticated user's ID. Configure MeiliSearch for partial word matching.",
+        "testStrategy": "Test that creating, updating, and deleting content creates an outbox event. Verify the background job processes the event and the MeiliSearch index is updated correctly. Test the search API with various queries and filters (keywords, tags, categories) and confirm it returns relevant, user-specific results.",
+        "priority": "high",
+        "dependencies": [
+          25
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 28,
+        "title": "Implement Reminders and Scheduled Notifications",
+        "description": "Develop the feature for users to set reminders on content, triggering scheduled email notifications via AWS SES.",
+        "details": "Create a `Reminder` entity. Implement APIs to create, list, and delete reminders. Use Spring's `@Scheduled` to run a job periodically that checks for due reminders. For each due reminder, send a notification email using AWS SES. Implement the 'mark as reviewed' feature by adding a flag to the `Content` entity.",
+        "testStrategy": "Create a reminder for the near future and verify that the scheduled job triggers and sends an email (or logs it in a test environment). Test the reminder management APIs (create, list, delete). Test the 'mark as reviewed' endpoint.",
+        "priority": "medium",
+        "dependencies": [
+          23,
+          25
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 29,
+        "title": "Implement Statistics Aggregation and API",
+        "description": "Create a system to aggregate daily, weekly, and monthly user activity statistics and expose them via an API.",
+        "details": "Design a schema for storing aggregated stats. Implement a scheduled job (daily at 02:00 KST) to calculate the previous day's metrics (new content count, view count changes) for each user and store them. Develop the `/api/stats` endpoint to retrieve this aggregated data for different time periods (daily, weekly, monthly).",
+        "testStrategy": "Manually create user activity (add content, view items). Trigger the aggregation job and verify that the stats are calculated and stored correctly. Test the stats API to ensure it returns the correct data structure for different time ranges.",
+        "priority": "low",
+        "dependencies": [
+          25
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 30,
+        "title": "Implement AI-Powered Summarization and Tagging",
+        "description": "Integrate AI capabilities to automatically generate summaries and suggest tags for text-based content.",
+        "details": "Create an `AIService` component. Implement asynchronous processing triggered on content creation. Integrate a lightweight internal model for basic NLP tasks. Add a configurable option (via environment variable) to use an external API (e.g., OpenAI). Store the generated summary and tags in the `Content` entity.",
+        "testStrategy": "Test content creation (for notes/links) to verify that the AI analysis is triggered asynchronously. Check that the content record is updated with a summary and suggested tags after a short delay. Test the feature with the external AI flag enabled and disabled.",
+        "priority": "low",
+        "dependencies": [
+          25
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-07-31T09:42:13.664Z",
+      "updated": "2025-07-31T16:01:38.310Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+# Task ID: 3
+# Title: Implement Category Management (CRUD & Sorting)
+# Status: pending
+# Dependencies: 2
+# Priority: high
+# Description: Build the APIs for creating, reading, updating, deleting, and sorting user-specific content categories (folders).
+# Details:
+Create Category entity linked to a User. Implement REST endpoints for full CRUD operations on categories. Implement sorting options via query parameters (e.g., `?sort=createdDate`). Support custom user-defined sorting by adding an `order_index` field and an endpoint to reorder categories. Ensure deleting a category cascades to delete its associated content items. The category list endpoint should include metadata like content count.
+
+# Test Strategy:
+API tests for all CRUD endpoints (POST, GET, PUT, DELETE). Verify that a user can only manage their own categories. Test the sorting logic, including the custom order. Test the cascade delete functionality to ensure content is removed when a category is deleted.

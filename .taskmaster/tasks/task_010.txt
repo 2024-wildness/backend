@@ -1,0 +1,11 @@
+# Task ID: 10
+# Title: Implement AI-Powered Content Enhancement
+# Status: pending
+# Dependencies: 4
+# Priority: low
+# Description: Integrate AI features to automatically generate summaries and suggest tags for text-based content.
+# Details:
+Develop an AI service that can be triggered asynchronously after content creation. This service will analyze the content's text to generate a short summary and a list of relevant tags. Implement a configuration flag to switch between a lightweight internal model and a more powerful external API (e.g., OpenAI). The generated summary and tags will be saved back to the Content entity. Ensure the AI process is fault-tolerant.
+
+# Test Strategy:
+Create a text note and verify that the AI analysis is triggered. Check that the `summary` field is populated and new tags are added to the content after a short delay. Test the feature with the external AI flag enabled and disabled. Verify that failures in the AI service do not prevent content from being created.

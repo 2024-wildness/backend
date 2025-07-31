@@ -8,6 +8,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.sesv2.SesAsyncClient;
 
 import java.net.URI;
@@ -47,6 +48,19 @@ public class ServiceClientsConfig {
             props.getEmail().getSecretKey()
         );
         return SesAsyncClient.builder()
+            .credentialsProvider(StaticCredentialsProvider.create(creds))
+            .region(Region.of(props.getEmail().getRegion()))
+            .build();
+    }
+
+    @Bean
+    public S3Presigner s3Presigner(AppProperties props) {
+        AwsBasicCredentials creds = AwsBasicCredentials.create(
+            props.getStorage().getAccessKey(),
+            props.getStorage().getSecretKey()
+        );
+        return S3Presigner.builder()
+            .endpointOverride(URI.create(props.getStorage().getEndpoint()))
             .credentialsProvider(StaticCredentialsProvider.create(creds))
             .region(Region.of(props.getEmail().getRegion()))
             .build();

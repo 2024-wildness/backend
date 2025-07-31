@@ -1,0 +1,11 @@
+# Task ID: 4
+# Title: Implement Content Management Core (CRUD & File Storage)
+# Status: pending
+# Dependencies: 3
+# Priority: high
+# Description: Develop the core functionality for managing content items (Photos, Links, Notes), including integration with MinIO for file storage.
+# Details:
+Create a polymorphic Content entity to handle 'photo', 'link', and 'note' types. For photo uploads, implement a flow to generate a presigned upload URL from MinIO. The client uploads the file directly, and a subsequent API call finalizes the content creation. Implement CRUD endpoints for all content types. Deleting a photo must also remove the corresponding file from MinIO storage.
+
+# Test Strategy:
+Test CRUD operations for each content type. For photos, test the presigned URL generation and verify that files can be uploaded to MinIO and later retrieved. Test that deleting a photo content item also deletes the file in MinIO. Validate input constraints (e.g., file size, URL format).

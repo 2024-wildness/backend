@@ -1,0 +1,11 @@
+# Task ID: 2
+# Title: Implement User Account & Authentication System
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Develop the complete user management and authentication flow, including registration, login with JWT, and password reset via email.
+# Details:
+Create User entity and repository. Implement endpoints for sign-up (validating unique username/email, hashing password with Argon2/BCrypt), login (issuing a JWT), and password reset. The reset flow includes generating a secure token, sending a reset link via AWS SES, and an endpoint to confirm the reset with the token and new password. Secure all protected endpoints using a JWT filter.
+
+# Test Strategy:
+Unit test user creation and password hashing. Integration test the full sign-up -> login -> protected endpoint access flow. Test the password reset flow by requesting a reset, checking for the email (or logged link in dev), and successfully resetting the password. Test failure cases like duplicate username, incorrect password, and expired reset token.

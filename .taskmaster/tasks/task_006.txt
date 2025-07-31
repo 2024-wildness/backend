@@ -1,0 +1,11 @@
+# Task ID: 6
+# Title: Implement Content Sharing via Secure Links
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Build the system for generating, managing, and accessing secure, shareable links for individual content items.
+# Details:
+Create a ShareLink entity to store a unique, unguessable token, content reference, expiration date, and max download count. Implement an API for users to create and revoke share links. Develop a public endpoint (`/share/{token}`) that validates the token, checks expiration/download limits, and serves the content. For files, redirect to a presigned MinIO download URL. Increment content view count and share link download count on successful access.
+
+# Test Strategy:
+Test share link creation with different expiration and download limit settings. Access a shared link and verify content is delivered. Test that expired, revoked, or download-limit-exceeded links are correctly denied. Ensure the public endpoint does not require authentication.
