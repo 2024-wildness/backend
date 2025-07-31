@@ -60,7 +60,7 @@ public class ShareLinkService {
     }
 
     @Transactional
-    public java.util.List<ShareLink> listShareLinks(Long contentId, Authentication auth) {
+    public List<ShareLink> listShareLinks(Long contentId, Authentication auth) {
         Content content = contentRepository.findById(contentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (content.getCategory() != null && !content.getCategory().getUser().getUsername().equals(auth.getName())) {
