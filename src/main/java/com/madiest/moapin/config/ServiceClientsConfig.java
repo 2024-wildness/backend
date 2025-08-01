@@ -34,6 +34,13 @@ public class ServiceClientsConfig {
             .build();
     }
 
+    /**
+     * MeiliSearch 클라이언트 인스턴스를 생성하여 반환합니다.
+     *
+     * 검색 서비스의 호스트와 API 키를 `AppProperties`에서 읽어와 MeiliSearch 클라이언트를 구성합니다.
+     *
+     * @return MeiliSearch 서비스와 통신할 수 있는 클라이언트 인스턴스
+     */
     @Bean
     public Client meiliSearchClient(AppProperties props) {
         return new Client(new Config(
@@ -42,6 +49,11 @@ public class ServiceClientsConfig {
         ));
     }
 
+    /**
+     * 애플리케이션의 이메일 설정 정보를 기반으로 AWS SES V2 비동기 클라이언트를 생성하여 반환합니다.
+     *
+     * @return 구성된 SesV2AsyncClient 인스턴스
+     */
     @Bean
     public SesV2AsyncClient sesAsyncClient(AppProperties props) {
         AwsBasicCredentials creds = AwsBasicCredentials.create(
@@ -54,6 +66,13 @@ public class ServiceClientsConfig {
             .build();
     }
 
+    /**
+     * AWS S3 Presigner 인스턴스를 생성하여 반환합니다.
+     *
+     * S3 Presigner는 지정된 AppProperties의 스토리지 접근 키, 시크릿 키, 엔드포인트, 그리고 이메일 리전 정보를 사용하여 구성됩니다.
+     *
+     * @return 구성된 S3Presigner 인스턴스
+     */
     @Bean
     public S3Presigner s3Presigner(AppProperties props) {
         AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(

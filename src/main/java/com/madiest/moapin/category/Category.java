@@ -31,6 +31,9 @@ public class Category {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    /**
+     * 엔티티가 처음 저장되기 전에 생성 시각을 현재 시각으로 설정합니다.
+     */
     @PrePersist
     void onCreate() {
         this.createdAt = java.time.Instant.now();
