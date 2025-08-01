@@ -43,6 +43,6 @@ public class SearchController {
         request.setFilter(new String[]{"user = '" + auth.getName() + "'"});
 
         // 2. index.search()가 반환하는 원본 SearchResult 타입을 그대로 반환합니다.
-        return index.search(request);
+        return index.search(request.getQ());
     }
 }
