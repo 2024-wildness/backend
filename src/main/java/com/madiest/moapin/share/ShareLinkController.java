@@ -22,6 +22,11 @@ public class ShareLinkController {
 
     private final ShareLinkService service;
 
+    /**
+     * ShareLinkController의 인스턴스를 생성하고, 공유 링크 관련 서비스를 주입합니다.
+     *
+     * @param service 공유 링크 관련 비즈니스 로직을 처리하는 서비스
+     */
     public ShareLinkController(ShareLinkService service) {
         this.service = service;
     }
@@ -36,6 +41,13 @@ public class ShareLinkController {
 
     }
 
+    /**
+     * 새로운 공유 링크를 생성하여 반환합니다.
+     *
+     * @param req 공유 링크 생성에 필요한 요청 데이터
+     * @param auth 인증 정보
+     * @return 생성된 공유 링크 객체
+     */
     @PostMapping
     public ShareLink create(@Valid @RequestBody CreateRequest req, Authentication auth) {
         return service.createShareLink(req.getContentId(), req.getExpiresAt(), req.getMaxDownloads(), auth);
