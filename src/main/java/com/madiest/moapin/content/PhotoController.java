@@ -1,38 +1,22 @@
 package com.madiest.moapin.content;
 
-import com.madiest.moapin.content.payload.PhotoCompleteRequest;
-import com.madiest.moapin.content.payload.PhotoDownloadUrlResponse;
-import com.madiest.moapin.content.payload.PhotoUploadUrlRequest;
-import com.madiest.moapin.content.payload.PhotoUploadUrlResponse;
+import com.madiest.moapin.config.AppProperties;
+import com.madiest.moapin.content.payload.*;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import javax.validation.Valid;
-import java.time.Duration;
-
-import com.madiest.moapin.config.AppProperties;
-import com.madiest.moapin.content.payload.CreateContentRequest;
-import com.madiest.moapin.content.payload.ContentResponse;
-import com.madiest.moapin.content.ContentType;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
-import com.madiest.moapin.content.Photo;
-import com.madiest.moapin.content.Content;
-import com.madiest.moapin.content.ContentService;
-
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+
+import java.time.Duration;
 
 /**
  * REST endpoints for photo upload/download presigned URLs.

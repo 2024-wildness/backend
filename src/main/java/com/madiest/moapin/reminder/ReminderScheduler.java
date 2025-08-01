@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import software.amazon.awssdk.services.sesv2.SesAsyncClient;
+import software.amazon.awssdk.services.sesv2.SesV2AsyncClient;
 import software.amazon.awssdk.services.sesv2.model.*;
 
 import java.time.Instant;
@@ -19,9 +19,15 @@ import java.util.concurrent.CompletableFuture;
 public class ReminderScheduler {
     private static final Logger log = LoggerFactory.getLogger(ReminderScheduler.class);
     private final ReminderRepository repository;
-    private final SesAsyncClient sesClient;
+    private final SesV2AsyncClient sesClient;
 
-    public ReminderScheduler(ReminderRepository repository, SesAsyncClient sesClient) {
+    /**
+     * ReminderScheduler의 인스턴스를 생성하여 리포지토리와 AWS SES V2 비동기 클라이언트를 초기화합니다.
+     *
+     * @param repository 리마인더 데이터에 접근하는 저장소
+     * @param sesClient AWS SES V2 비동기 이메일 전송 클라이언트
+     */
+    public ReminderScheduler(ReminderRepository repository, SesV2AsyncClient sesClient) {
         this.repository = repository;
         this.sesClient = sesClient;
     }

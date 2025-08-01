@@ -7,7 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import software.amazon.awssdk.services.sesv2.SesAsyncClient;
+import software.amazon.awssdk.services.sesv2.SesV2AsyncClient;
 import software.amazon.awssdk.services.sesv2.model.*;
 
 import java.time.Instant;
@@ -22,12 +22,17 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokenRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final SesAsyncClient sesClient;
+    private final SesV2AsyncClient sesClient;
 
+    /**
+     * 비밀번호 재설정 서비스를 초기화합니다.
+     *
+     * 비밀번호 재설정 토큰 저장소, 사용자 저장소, 비밀번호 인코더, AWS SES V2 비동기 클라이언트를 주입받아 서비스의 의존성을 구성합니다.
+     */
     public PasswordResetService(PasswordResetTokenRepository tokenRepository,
                                 UserRepository userRepository,
                                 PasswordEncoder passwordEncoder,
-                                SesAsyncClient sesClient) {
+                                SesV2AsyncClient sesClient) {
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;

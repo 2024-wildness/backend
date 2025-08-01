@@ -1,7 +1,8 @@
 package com.madiest.moapin.content;
 
 import com.madiest.moapin.category.Category;
-import javax.persistence.*;
+import jakarta.persistence.*;
+
 import java.time.Instant;
 
 /**

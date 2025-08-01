@@ -1,15 +1,9 @@
 package com.madiest.moapin.category;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import javax.validation.Valid;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * REST endpoints for category management.
@@ -40,9 +34,15 @@ public class CategoryController {
         return ResponseEntity.ok(cat);
     }
 
+    /**
+     * 카테고리 목록을 정렬 기준에 따라 조회하여 반환합니다.
+     *
+     * @param sort 카테고리 정렬 기준(기본값: "createdDate")
+     * @return 정렬된 카테고리 목록의 응답 리스트
+     */
     @GetMapping
     public ResponseEntity<java.util.List<com.madiest.moapin.category.payload.CategoryListResponse>> listCategories(
-            org.springframework.web.bind.annotation.RequestParam(value = "sort", defaultValue = "createdDate") String sort,
+            @RequestParam(value = "sort", defaultValue = "createdDate") String sort,
             Authentication auth) {
         java.util.List<com.madiest.moapin.category.payload.CategoryListResponse> list =
                 categoryService.listCategories(auth, sort);

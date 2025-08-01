@@ -1,9 +1,8 @@
 package com.madiest.moapin.content;
 
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
 /**
  * Photo content, stores a reference to the file in MinIO.
  */

@@ -1,5 +1,7 @@
 package com.madiest.moapin.reminder;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -30,27 +32,22 @@ public class ReminderController {
         return service.listReminders(auth.getName());
     }
 
+    /**
+     * 지정한 ID의 리마인더를 인증된 사용자의 목록에서 삭제합니다.
+     *
+     * @param id 삭제할 리마인더의 고유 식별자
+     */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id, Authentication auth) {
         service.deleteReminder(id, auth.getName());
     }
 
+    @Setter
+    @Getter
     public static class ReminderRequest {
         private Long contentId;
         private Instant remindAt;
 
-        public Long getContentId() {
-            return contentId;
-        }
-        public void setContentId(Long contentId) {
-            this.contentId = contentId;
-        }
-        public Instant getRemindAt() {
-            return remindAt;
-        }
-        public void setRemindAt(Instant remindAt) {
-            this.remindAt = remindAt;
-        }
     }
 }

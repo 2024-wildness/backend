@@ -1,12 +1,16 @@
 package com.madiest.moapin.content;
 
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
+import jakarta.persistence.Column;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Link content, stores an external URL.
  */
+@Setter
+@Getter
 @Entity
 @DiscriminatorValue("LINK")
 public class Link extends Content {
@@ -14,11 +18,4 @@ public class Link extends Content {
     @Column(name = "url", nullable = false)
     private String url;
 
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
 }

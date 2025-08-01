@@ -1,16 +1,14 @@
 package com.madiest.moapin.content.payload;
 
-import com.madiest.moapin.content.Content;
-import com.madiest.moapin.content.Photo;
-import com.madiest.moapin.content.Link;
-import com.madiest.moapin.content.Note;
-import com.madiest.moapin.content.ContentType;
+import com.madiest.moapin.content.*;
+import lombok.Getter;
 
 import java.time.Instant;
 
 /**
  * Response DTO for content items.
  */
+@Getter
 public class ContentResponse {
 
     private Long id;
@@ -23,6 +21,14 @@ public class ContentResponse {
     private String url;
     private String textContent;
 
+    /**
+     * 주어진 Content 엔티티를 기반으로 ContentResponse 객체를 생성합니다.
+     *
+     * Content의 실제 타입에 따라 type 및 관련 필드를 설정합니다.
+     *
+     * @param content Content 엔티티 인스턴스
+     * @return ContentResponse로 변환된 객체
+     */
     public static ContentResponse fromEntity(Content content) {
         ContentResponse resp = new ContentResponse();
         resp.id = content.getId();
@@ -30,52 +36,23 @@ public class ContentResponse {
         resp.viewCount = content.getViewCount();
         resp.pinned = content.isPinned();
         resp.categoryId = content.getCategory() != null ? content.getCategory().getId() : null;
-        if (content instanceof Photo) {
-            resp.type = ContentType.PHOTO;
-            resp.fileKey = ((Photo) content).getFileKey();
-        } else if (content instanceof Link) {
-            resp.type = ContentType.LINK;
-            resp.url = ((Link) content).getUrl();
-        } else if (content instanceof Note) {
-            resp.type = ContentType.NOTE;
-            resp.textContent = ((Note) content).getTextContent();
+        switch (content) {
+            case Photo photo -> {
+                resp.type = ContentType.PHOTO;
+                resp.fileKey = photo.getFileKey();
+            }
+            case Link link -> {
+                resp.type = ContentType.LINK;
+                resp.url = link.getUrl();
+            }
+            case Note note -> {
+                resp.type = ContentType.NOTE;
+                resp.textContent = note.getTextContent();
+            }
+            default -> {
+            }
         }
         return resp;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public ContentType getType() {
-        return type;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public long getViewCount() {
-        return viewCount;
-    }
-
-    public boolean isPinned() {
-        return pinned;
-    }
-
-    public Long getCategoryId() {
-        return categoryId;
-    }
-
-    public String getFileKey() {
-        return fileKey;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public String getTextContent() {
-        return textContent;
-    }
 }
