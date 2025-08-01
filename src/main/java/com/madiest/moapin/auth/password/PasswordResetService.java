@@ -7,7 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import software.amazon.awssdk.services.sesv2.SesAsyncClient;
+import software.amazon.awssdk.services.sesv2.SesV2AsyncClient;
 import software.amazon.awssdk.services.sesv2.model.*;
 
 import java.time.Instant;
@@ -22,12 +22,12 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokenRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final SesAsyncClient sesClient;
+    private final SesV2AsyncClient sesClient;
 
     public PasswordResetService(PasswordResetTokenRepository tokenRepository,
                                 UserRepository userRepository,
                                 PasswordEncoder passwordEncoder,
-                                SesAsyncClient sesClient) {
+                                SesV2AsyncClient sesClient) {
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;

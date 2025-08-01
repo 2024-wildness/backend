@@ -1,56 +1,69 @@
 package com.madiest.moapin.auth;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import com.madiest.moapin.config.AppProperties;
+import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 
 /**
- * Service for generating JSON Web Tokens.
+ * JWT utility that leverages Spring Security’s {@link JwtEncoder}/{@link JwtDecoder}
+ * instead of direct JJWT usage. This means:
+ * <ul>
+ *   <li>Token 검증은 Spring Security 필터 체인과 동일한 로직(Nimbus)으로 수행</li>
+ *   <li>발급 역시 {@link JwtEncoder}로 구현해 코드 일관성 유지</li>
+ *   <li>테스트가 쉬운 {@link Clock} 주입</li>
+ *   <li>만료 시간은 {@link Duration} 형태로 <code>application.yml</code>에서 설정</li>
+ * </ul>
  */
 @Service
 public class JwtService {
 
-    private final String jwtSecret;
-    private final long jwtExpirationMs = 86400000; // 24 hours
+    private final JwtEncoder encoder;
+    private final JwtDecoder decoder;
+    private final Duration expiration;
+    private final Clock clock;
 
-    public JwtService(com.madiest.moapin.config.AppProperties props) {
-        this.jwtSecret = props.getJwt().getSecret();
+    public JwtService(JwtEncoder encoder,
+                      JwtDecoder decoder,
+                      AppProperties props,
+                      Clock clock) {
+        this.encoder = encoder;
+        this.decoder = decoder;
+        this.expiration = props.getJwt().getExpiration();
+        this.clock = clock;
     }
 
     /**
-     * Create a signed JWT containing the username as subject.
+     * Generates a signed JWT for the supplied username.
      */
     public String generateToken(String username) {
-        long now = System.currentTimeMillis();
-        return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date(now))
-                .setExpiration(new Date(now + jwtExpirationMs))
-                .signWith(SignatureAlgorithm.HS256, jwtSecret.getBytes())
-                .compact();
+        Instant now = clock.instant();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .subject(username)
+                .issuedAt(now)
+                .expiresAt(now.plus(expiration))
+                .build();
+
+        return encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
     }
 
-    /**
-     * Validate the JWT token signature and expiration.
-     */
+    /** Delegates validation to Spring Security’s {@link JwtDecoder}. */
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().setSigningKey(jwtSecret.getBytes()).parseClaimsJws(token);
+            decoder.decode(token); // signature, expiry, etc.
             return true;
-        } catch (Exception e) {
+        } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }
 
     /**
-     * Parse claims from the token for authentication.
+     * Convenience accessor for downstream layers that need claims.
      */
-    public Claims parseClaims(String token) {
-        return Jwts.parser()
-                .setSigningKey(jwtSecret.getBytes())
-                .parseClaimsJws(token)
-                .getBody();
+    public Jwt decode(String token) {
+        return decoder.decode(token);
     }
 }

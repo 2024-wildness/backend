@@ -1,6 +1,6 @@
 package com.madiest.moapin.content.payload;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * Request DTO to generate a presigned upload URL for a photo.

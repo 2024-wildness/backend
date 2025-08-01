@@ -1,14 +1,17 @@
 package com.madiest.moapin.share;
 
 import com.madiest.moapin.content.Content;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.List;
+
 
 /**
  * REST controller for share link operations.
@@ -23,17 +26,14 @@ public class ShareLinkController {
         this.service = service;
     }
 
+    @Setter
+    @Getter
     public static class CreateRequest {
         @NotNull
         private Long contentId;
         private Instant expiresAt;
         private Integer maxDownloads;
-        public Long getContentId() { return contentId; }
-        public void setContentId(Long contentId) { this.contentId = contentId; }
-        public Instant getExpiresAt() { return expiresAt; }
-        public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
-        public Integer getMaxDownloads() { return maxDownloads; }
-        public void setMaxDownloads(Integer maxDownloads) { this.maxDownloads = maxDownloads; }
+
     }
 
     @PostMapping

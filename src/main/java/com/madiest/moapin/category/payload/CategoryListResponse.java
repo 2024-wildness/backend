@@ -1,17 +1,20 @@
 package com.madiest.moapin.category.payload;
 
+import lombok.Getter;
+
 import java.time.Instant;
 
 /**
  * DTO for returning category list entries with metadata.
  */
+@Getter
 public class CategoryListResponse {
 
-    private Long id;
-    private String name;
-    private Integer orderIndex;
-    private Instant createdAt;
-    private long contentCount;
+    private final Long id;
+    private final String name;
+    private final Integer orderIndex;
+    private final Instant createdAt;
+    private final long contentCount;
 
     public CategoryListResponse(Long id,
                                 String name,
@@ -25,23 +28,4 @@ public class CategoryListResponse {
         this.contentCount = contentCount;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Integer getOrderIndex() {
-        return orderIndex;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public long getContentCount() {
-        return contentCount;
-    }
 }

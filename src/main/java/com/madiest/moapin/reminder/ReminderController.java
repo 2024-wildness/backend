@@ -1,5 +1,7 @@
 package com.madiest.moapin.reminder;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -36,21 +38,11 @@ public class ReminderController {
         service.deleteReminder(id, auth.getName());
     }
 
+    @Setter
+    @Getter
     public static class ReminderRequest {
         private Long contentId;
         private Instant remindAt;
 
-        public Long getContentId() {
-            return contentId;
-        }
-        public void setContentId(Long contentId) {
-            this.contentId = contentId;
-        }
-        public Instant getRemindAt() {
-            return remindAt;
-        }
-        public void setRemindAt(Instant remindAt) {
-            this.remindAt = remindAt;
-        }
     }
 }

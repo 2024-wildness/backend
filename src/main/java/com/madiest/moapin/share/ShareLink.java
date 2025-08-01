@@ -1,13 +1,16 @@
 package com.madiest.moapin.share;
 
 import com.madiest.moapin.content.Content;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
-import javax.persistence.*;
 import java.time.Instant;
 
 /**
  * Entity representing a shareable link for a content item.
  */
+@Getter
 @Entity
 @Table(name = "share_link")
 public class ShareLink {
@@ -16,22 +19,28 @@ public class ShareLink {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter
     @Column(nullable = false, unique = true)
     private String token;
 
+    @Setter
     @ManyToOne(optional = false)
     @JoinColumn(name = "content_id")
     private Content content;
 
+    @Setter
     @Column(name = "expires_at")
     private Instant expiresAt;
 
+    @Setter
     @Column(name = "max_downloads")
     private Integer maxDownloads;
 
+    @Setter
     @Column(name = "download_count", nullable = false)
     private long downloadCount = 0L;
 
+    @Setter
     @Column(nullable = false)
     private boolean revoked = false;
 
@@ -43,18 +52,4 @@ public class ShareLink {
         this.createdAt = Instant.now();
     }
 
-    public Long getId() { return id; }
-    public String getToken() { return token; }
-    public void setToken(String token) { this.token = token; }
-    public Content getContent() { return content; }
-    public void setContent(Content content) { this.content = content; }
-    public Instant getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
-    public Integer getMaxDownloads() { return maxDownloads; }
-    public void setMaxDownloads(Integer maxDownloads) { this.maxDownloads = maxDownloads; }
-    public long getDownloadCount() { return downloadCount; }
-    public void setDownloadCount(long downloadCount) { this.downloadCount = downloadCount; }
-    public boolean isRevoked() { return revoked; }
-    public void setRevoked(boolean revoked) { this.revoked = revoked; }
-    public Instant getCreatedAt() { return createdAt; }
 }

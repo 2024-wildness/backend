@@ -1,18 +1,15 @@
 package com.madiest.moapin.category;
 
 import com.madiest.moapin.auth.User;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.Table;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Entity representing a user-defined category.
  */
+@Setter
+@Getter
 @Entity
 @Table(name = "categories")
 public class Category {
@@ -34,46 +31,7 @@ public class Category {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Integer getOrderIndex() {
-        return orderIndex;
-    }
-
-    public void setOrderIndex(Integer orderIndex) {
-        this.orderIndex = orderIndex;
-    }
-
-    public java.time.Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(java.time.Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-    @javax.persistence.PrePersist
+    @PrePersist
     void onCreate() {
         this.createdAt = java.time.Instant.now();
     }

@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import software.amazon.awssdk.services.sesv2.SesAsyncClient;
+import software.amazon.awssdk.services.sesv2.SesV2AsyncClient;
 import software.amazon.awssdk.services.sesv2.model.*;
 
 import java.time.Instant;
@@ -19,9 +19,9 @@ import java.util.concurrent.CompletableFuture;
 public class ReminderScheduler {
     private static final Logger log = LoggerFactory.getLogger(ReminderScheduler.class);
     private final ReminderRepository repository;
-    private final SesAsyncClient sesClient;
+    private final SesV2AsyncClient sesClient;
 
-    public ReminderScheduler(ReminderRepository repository, SesAsyncClient sesClient) {
+    public ReminderScheduler(ReminderRepository repository, SesV2AsyncClient sesClient) {
         this.repository = repository;
         this.sesClient = sesClient;
     }

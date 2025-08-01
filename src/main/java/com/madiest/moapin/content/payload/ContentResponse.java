@@ -1,16 +1,14 @@
 package com.madiest.moapin.content.payload;
 
-import com.madiest.moapin.content.Content;
-import com.madiest.moapin.content.Photo;
-import com.madiest.moapin.content.Link;
-import com.madiest.moapin.content.Note;
-import com.madiest.moapin.content.ContentType;
+import com.madiest.moapin.content.*;
+import lombok.Getter;
 
 import java.time.Instant;
 
 /**
  * Response DTO for content items.
  */
+@Getter
 public class ContentResponse {
 
     private Long id;
@@ -30,52 +28,23 @@ public class ContentResponse {
         resp.viewCount = content.getViewCount();
         resp.pinned = content.isPinned();
         resp.categoryId = content.getCategory() != null ? content.getCategory().getId() : null;
-        if (content instanceof Photo) {
-            resp.type = ContentType.PHOTO;
-            resp.fileKey = ((Photo) content).getFileKey();
-        } else if (content instanceof Link) {
-            resp.type = ContentType.LINK;
-            resp.url = ((Link) content).getUrl();
-        } else if (content instanceof Note) {
-            resp.type = ContentType.NOTE;
-            resp.textContent = ((Note) content).getTextContent();
+        switch (content) {
+            case Photo photo -> {
+                resp.type = ContentType.PHOTO;
+                resp.fileKey = photo.getFileKey();
+            }
+            case Link link -> {
+                resp.type = ContentType.LINK;
+                resp.url = link.getUrl();
+            }
+            case Note note -> {
+                resp.type = ContentType.NOTE;
+                resp.textContent = note.getTextContent();
+            }
+            default -> {
+            }
         }
         return resp;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public ContentType getType() {
-        return type;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public long getViewCount() {
-        return viewCount;
-    }
-
-    public boolean isPinned() {
-        return pinned;
-    }
-
-    public Long getCategoryId() {
-        return categoryId;
-    }
-
-    public String getFileKey() {
-        return fileKey;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public String getTextContent() {
-        return textContent;
-    }
 }

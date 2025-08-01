@@ -1,11 +1,15 @@
 package com.madiest.moapin.content.payload;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Request DTO for completing a photo upload and creating the Photo entity.
  */
+@Setter
+@Getter
 public class PhotoCompleteRequest {
 
     @NotBlank
@@ -13,19 +17,4 @@ public class PhotoCompleteRequest {
 
     private Long categoryId;
 
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-
-    public Long getCategoryId() {
-        return categoryId;
-    }
-
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
-    }
 }

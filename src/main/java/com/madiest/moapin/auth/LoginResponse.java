@@ -1,8 +1,13 @@
 package com.madiest.moapin.auth;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * Response payload containing the JWT access token.
  */
+@Setter
+@Getter
 public class LoginResponse {
 
     private String accessToken;
@@ -11,11 +16,4 @@ public class LoginResponse {
         this.accessToken = accessToken;
     }
 
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-    }
 }

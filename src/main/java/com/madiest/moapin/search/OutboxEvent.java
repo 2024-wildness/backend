@@ -1,11 +1,15 @@
 package com.madiest.moapin.search;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.Instant;
 
 /**
  * Entity representing an event to be processed by the search indexer.
  */
+@Getter
 @Entity
 @Table(name = "outbox_event")
 public class OutboxEvent {
@@ -15,17 +19,21 @@ public class OutboxEvent {
     private Long id;
 
     /** Type of event: INDEX or DELETE */
+    @Setter
     @Column(nullable = false)
     private String type;
 
     /** ID of the affected content item */
+    @Setter
     @Column(name = "content_id", nullable = false)
     private Long contentId;
 
     /** JSON payload representing the document to index */
+    @Setter
     @Lob
     private String payload;
 
+    @Setter
     @Column(nullable = false)
     private boolean processed = false;
 
@@ -37,43 +45,4 @@ public class OutboxEvent {
         this.createdAt = Instant.now();
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public Long getContentId() {
-        return contentId;
-    }
-
-    public void setContentId(Long contentId) {
-        this.contentId = contentId;
-    }
-
-    public String getPayload() {
-        return payload;
-    }
-
-    public void setPayload(String payload) {
-        this.payload = payload;
-    }
-
-    public boolean isProcessed() {
-        return processed;
-    }
-
-    public void setProcessed(boolean processed) {
-        this.processed = processed;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
 }

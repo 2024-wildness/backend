@@ -1,6 +1,7 @@
 package com.madiest.moapin.config;
 
 import com.meilisearch.sdk.Client;
+import com.meilisearch.sdk.Config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -9,7 +10,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.sesv2.SesAsyncClient;
+import software.amazon.awssdk.services.sesv2.SesV2AsyncClient;
 
 import java.net.URI;
 
@@ -35,19 +36,19 @@ public class ServiceClientsConfig {
 
     @Bean
     public Client meiliSearchClient(AppProperties props) {
-        return new Client(
+        return new Client(new Config(
             props.getSearch().getHost(),
             props.getSearch().getApiKey()
-        );
+        ));
     }
 
     @Bean
-    public SesAsyncClient sesAsyncClient(AppProperties props) {
+    public SesV2AsyncClient sesAsyncClient(AppProperties props) {
         AwsBasicCredentials creds = AwsBasicCredentials.create(
             props.getEmail().getAccessKey(),
             props.getEmail().getSecretKey()
         );
-        return SesAsyncClient.builder()
+        return SesV2AsyncClient.builder()
             .credentialsProvider(StaticCredentialsProvider.create(creds))
             .region(Region.of(props.getEmail().getRegion()))
             .build();
@@ -55,13 +56,13 @@ public class ServiceClientsConfig {
 
     @Bean
     public S3Presigner s3Presigner(AppProperties props) {
-        AwsBasicCredentials creds = AwsBasicCredentials.create(
+        AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(
             props.getStorage().getAccessKey(),
             props.getStorage().getSecretKey()
         );
         return S3Presigner.builder()
             .endpointOverride(URI.create(props.getStorage().getEndpoint()))
-            .credentialsProvider(StaticCredentialsProvider.create(creds))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))
             .region(Region.of(props.getEmail().getRegion()))
             .build();
     }
