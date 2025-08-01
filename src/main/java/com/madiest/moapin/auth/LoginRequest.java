@@ -7,14 +7,13 @@ import lombok.Setter;
 /**
  * Request payload for user login.
  */
+@Getter
 public class LoginRequest {
 
     @NotBlank
-    @Getter
     private String username;
 
     @Setter
-    @Getter
     @NotBlank
     private String password;
 
