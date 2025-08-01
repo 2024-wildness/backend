@@ -51,9 +51,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     compileOnly 'org.projectlombok:lombok'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
     runtimeOnly 'com.h2database:h2'
+    testImplementation 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
     runtimeOnly 'org.springframework.modulith:spring-modulith-events-amqp'
 
@@ -87,6 +90,7 @@ dependencyManagement {
 tasks.named('test') {
     outputs.dir snippetsDir
     useJUnitPlatform()
+    systemProperty 'spring.test.aot.processing.failOnError', 'false'
 }
 
 tasks.named('asciidoctor') {
