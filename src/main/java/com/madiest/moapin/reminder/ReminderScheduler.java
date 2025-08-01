@@ -21,6 +21,12 @@ public class ReminderScheduler {
     private final ReminderRepository repository;
     private final SesV2AsyncClient sesClient;
 
+    /**
+     * ReminderScheduler의 인스턴스를 생성하여 리포지토리와 AWS SES V2 클라이언트를 초기화합니다.
+     *
+     * @param repository 알림 정보를 조회 및 저장하는 리포지토리
+     * @param sesClient 이메일 발송을 위한 AWS SES V2 비동기 클라이언트
+     */
     public ReminderScheduler(ReminderRepository repository, SesV2AsyncClient sesClient) {
         this.repository = repository;
         this.sesClient = sesClient;

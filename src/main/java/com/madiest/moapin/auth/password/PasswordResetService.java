@@ -24,6 +24,9 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final SesV2AsyncClient sesClient;
 
+    /**
+     * PasswordResetService의 인스턴스를 생성하여 비밀번호 재설정 프로세스에 필요한 저장소, 암호화기, AWS SES 클라이언트를 초기화합니다.
+     */
     public PasswordResetService(PasswordResetTokenRepository tokenRepository,
                                 UserRepository userRepository,
                                 PasswordEncoder passwordEncoder,

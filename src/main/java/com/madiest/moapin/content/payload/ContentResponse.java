@@ -21,6 +21,14 @@ public class ContentResponse {
     private String url;
     private String textContent;
 
+    /**
+     * 주어진 Content 엔티티로부터 ContentResponse 객체를 생성합니다.
+     *
+     * Content의 실제 타입에 따라 type, fileKey, url, textContent 중 하나의 필드를 설정합니다.
+     *
+     * @param content Content 엔티티 인스턴스
+     * @return ContentResponse로 변환된 객체
+     */
     public static ContentResponse fromEntity(Content content) {
         ContentResponse resp = new ContentResponse();
         resp.id = content.getId();

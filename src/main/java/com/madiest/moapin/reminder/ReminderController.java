@@ -32,6 +32,11 @@ public class ReminderController {
         return service.listReminders(auth.getName());
     }
 
+    /**
+     * 지정된 ID의 리마인더를 삭제합니다.
+     *
+     * @param id 삭제할 리마인더의 식별자
+     */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id, Authentication auth) {

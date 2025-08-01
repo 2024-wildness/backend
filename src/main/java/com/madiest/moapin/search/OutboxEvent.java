@@ -40,6 +40,9 @@ public class OutboxEvent {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    /**
+     * 엔티티가 영속화되기 전에 생성 시각을 현재 시각으로 설정합니다.
+     */
     @PrePersist
     void prePersist() {
         this.createdAt = Instant.now();

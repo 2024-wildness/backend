@@ -24,6 +24,12 @@ public class SearchIndexerService {
         this.client = client;
     }
 
+    /**
+     * 처리되지 않은 Outbox 이벤트를 주기적으로 조회하여 MeiliSearch "contents" 인덱스를 업데이트합니다.
+     *
+     * 이벤트 유형이 "DELETE"인 경우 해당 콘텐츠 ID의 문서를 인덱스에서 삭제하고, 그 외에는 페이로드를 문서로 추가합니다.
+     * 처리에 성공한 이벤트는 처리 완료로 표시되며, 실패한 이벤트는 다음 실행 시 재시도됩니다.
+     */
     @Scheduled(fixedDelay = 5000)
     @Transactional
     public void processEvents() {

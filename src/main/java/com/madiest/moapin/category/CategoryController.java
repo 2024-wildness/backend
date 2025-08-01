@@ -34,6 +34,12 @@ public class CategoryController {
         return ResponseEntity.ok(cat);
     }
 
+    /**
+     * 카테고리 목록을 정렬 기준에 따라 조회합니다.
+     *
+     * @param sort 카테고리 정렬 기준(기본값: "createdDate")
+     * @return 정렬된 카테고리 목록의 응답
+     */
     @GetMapping
     public ResponseEntity<java.util.List<com.madiest.moapin.category.payload.CategoryListResponse>> listCategories(
             @RequestParam(value = "sort", defaultValue = "createdDate") String sort,
