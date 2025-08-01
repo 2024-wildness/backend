@@ -35,7 +35,7 @@ public class SearchIndexerService {
                 if ("DELETE".equals(e.getType())) {
                     index.deleteDocument(e.getContentId().toString());
                 } else {
-                    index.addDocuments(e.getPayload(), new JacksonJsonHandler().toString());
+                    index.addDocuments(e.getPayload(), new JacksonJsonHandler());
                 }
                 e.setProcessed(true);
             } catch (Exception ex) {
