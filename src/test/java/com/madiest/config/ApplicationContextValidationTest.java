@@ -1,20 +1,21 @@
 package com.madiest.config;
 
-import org.junit.jupiter.api.Test;
+import com.madiest.moapin.MoapinApplication;
 import org.junit.jupiter.api.DisplayName;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.context.ApplicationContext;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Integration tests to validate that the Gradle build configuration 
+ * Integration tests to validate that the Gradle build configuration
  * properly loads the Spring application context
  * Testing Framework: JUnit 5 with Spring Boot Test
  */
-@SpringBootTest
+@SpringBootTest(classes = MoapinApplication.class)
 @ActiveProfiles("test")
 @DisplayName("Application Context Validation Tests")
 class ApplicationContextValidationTest {
