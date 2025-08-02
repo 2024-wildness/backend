@@ -1,19 +1,14 @@
 package com.madiest.config;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.api.Test;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -238,10 +233,12 @@ class GradleBuildConfigurationTest {
                     break;
                 }
             }
-            
+
+            boolean finalFoundPluginsStart = foundPluginsStart;
+            boolean finalFoundPluginsEnd = foundPluginsEnd;
             assertAll("Plugin block should be properly formatted",
-                () -> assertTrue(foundPluginsStart, "Plugins block should start with 'plugins {'"),
-                () -> assertTrue(foundPluginsEnd, "Plugins block should end with '}'")
+                    () -> assertTrue(finalFoundPluginsStart, "Plugins block should start with 'plugins {'"),
+                    () -> assertTrue(finalFoundPluginsEnd, "Plugins block should end with '}'")
             );
         }
 
@@ -262,10 +259,12 @@ class GradleBuildConfigurationTest {
                     break;
                 }
             }
-            
+
+            boolean finalFoundDependenciesStart = foundDependenciesStart;
+            boolean finalFoundDependenciesEnd = foundDependenciesEnd;
             assertAll("Dependencies block should be properly formatted",
-                () -> assertTrue(foundDependenciesStart, "Dependencies block should start with 'dependencies {'"),
-                () -> assertTrue(foundDependenciesEnd, "Dependencies block should end with '}'")
+                    () -> assertTrue(finalFoundDependenciesStart, "Dependencies block should start with 'dependencies {'"),
+                    () -> assertTrue(finalFoundDependenciesEnd, "Dependencies block should end with '}'")
             );
         }
 
@@ -277,12 +276,8 @@ class GradleBuildConfigurationTest {
             // Check for common syntax issues
             assertAll("Should not have common syntax errors",
                 () -> assertFalse(content.contains("''"), "Should not have empty string literals"),
-                () -> assertTrue(content.chars().filter(ch -> ch == '{').count() == 
-                                content.chars().filter(ch -> ch == '}').count(), 
-                                "Braces should be balanced"),
-                () -> assertTrue(content.chars().filter(ch -> ch == '(').count() == 
-                                content.chars().filter(ch -> ch == ')').count(), 
-                                "Parentheses should be balanced")
+                    () -> assertEquals(content.chars().filter(ch -> ch == '{').count(), content.chars().filter(ch -> ch == '}').count(), "Braces should be balanced"),
+                    () -> assertEquals(content.chars().filter(ch -> ch == '(').count(), content.chars().filter(ch -> ch == ')').count(), "Parentheses should be balanced")
             );
         }
     }
