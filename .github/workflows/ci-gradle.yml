@@ -2,7 +2,7 @@
 # 확인된 코드는 빌드되어 테스트을 진행합니다.
 # 이상이 없는 경우에는 빌드 내용을 임시 저장하여 배포를 돕습니다.
 
-name: CI - gradle with complie, test
+name: CI - gradle with compile, test
 
 on:
   pull_request:
