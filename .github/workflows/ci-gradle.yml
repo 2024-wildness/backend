@@ -34,7 +34,7 @@ jobs:
           gradle-version: '9.0'
 
       - name: Build with Gradle Wrapper
-        run: gradle build -x test
+        run: ./gradlew build -x test
 
       - name: Archive build output
         uses: actions/upload-artifact@v4
