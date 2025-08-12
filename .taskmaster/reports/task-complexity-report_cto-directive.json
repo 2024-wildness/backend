@@ -1,0 +1,109 @@
+{
+	"meta": {
+		"generatedAt": "2025-08-11T19:07:32.853Z",
+		"tasksAnalyzed": 12,
+		"totalTasks": 12,
+		"analysisCount": 12,
+		"thresholdScore": 6,
+		"projectName": "Taskmaster",
+		"usedResearch": false
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 5,
+			"taskTitle": "Initialize Spring Boot 3.2 project and core tooling",
+			"complexityScore": 6,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "Break down the Spring Boot 3.2 initialization into: 1) Project scaffolding (Gradle 8.5, Java 17, Spring Boot 3.2.x), 2) Dependency BOM and starters (web, security, validation, data-jpa, logging, graphql, jjwt, lombok, h2 test, postgresql runtime, querydsl), 3) Gradle configuration (annotation processing, QueryDSL plugin, Lombok, test tasks), 4) Code style and quality (Checkstyle Google style, Spotless, baseline config, fail build on violations), 5) Profiles and configs (application.yml common + local/prod/test overrides; env var mapping; UTC timezone; Jackson JavaTimeModule; Hibernate props incl. batch size, ddl-auto=validate), 6) Logging setup (JSON or pattern layout, logback configs, MDC correlationId filter, masking), 7) Docker artifacts (multi-stage Dockerfile, .dockerignore, docker-compose for local Postgres), 8) Base package structure creation with placeholder classes, 9) CI workflow (build, test, lint gates; cache Gradle; JDK matrix optional), 10) Verification steps (clean build, profile smoke, annotation processing check). For each subtask, specify acceptance criteria and commands/files to modify.",
+			"reasoning": "Medium complexity due to breadth: build system, dependencies, profiles, logging, Docker, and CI. Mostly deterministic but cross-cutting and error-prone; benefits from clear subtask separation."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Design and implement JPA domain model",
+			"complexityScore": 8,
+			"recommendedSubtasks": 12,
+			"expansionPrompt": "Expand the JPA modeling into: 1) Entity and enum design (User, Category, Content hierarchy with JOINED; Link, Note, Photo; Reminder, ShareLink, PasswordResetToken; ContentType), 2) Identifier strategy and converters (UUID generation, AttributeConverters if needed), 3) Relationships and cascades (owner, category nullable with ON DELETE SET NULL; orphanRemoval for Reminder), 4) Auditing (AuditingEntityListener, @CreatedDate/@LastModifiedDate, Clock bean), 5) Bean validation annotations and constraints, 6) Indexes/unique constraints mapping via JPA annotations, 7) Soft vs hard delete decisions and delete behaviors, 8) Repository interfaces and QueryDSL Q-types generation, 9) Entity test fixtures and test slices (H2 config), 10) Mapping tests (constraints, cascades, category delete behavior), 11) Performance annotations (fetch types, batch size alignment), 12) Migration compatibility notes for Flyway types and join tables.",
+			"reasoning": "High complexity from multiple entities, JOINED inheritance, ownership rules, cascades, auditing, and ensuring constraints/indexes align with DB migrations and tests."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Configure Spring Security with JWT (jjwt)",
+			"complexityScore": 7,
+			"recommendedSubtasks": 11,
+			"expansionPrompt": "Decompose security into: 1) Password hashing config (BCryptPasswordEncoder), 2) JJWT dependencies and secret management (HS256, rotation via env), 3) JwtTokenProvider (claims: userId, email, roles; TTL 15m; parse/validate), 4) SecurityFilterChain with stateless session, CSRF disabled for API, CORS, 5) JwtAuthenticationFilter (Bearer parsing, SecurityContext), 6) AuthenticationEntryPoint and AccessDeniedHandler returning JSON error model, 7) Endpoint authorization rules (/api/** secured except /api/auth/** and GET /share/**), 8) UserDetailsService or custom AuthenticationProvider wiring, 9) Exception-to-error-model mapping integration, 10) Integration tests (401/200 cases, expired/tampered tokens), 11) Configuration docs and sample env variables.",
+			"reasoning": "Security concerns, filter ordering, token correctness, and error handling add substantial complexity; integration tests are essential."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Implement Auth APIs: signup, login, logout, password reset request/confirm",
+			"complexityScore": 7,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "Split into: 1) DTOs and validation (Signup, Login, PasswordResetRequest, PasswordResetConfirm), 2) Email uniqueness check and repository methods, 3) Signup flow (hash password, persist user), 4) Login flow (AuthenticationManager, return {accessToken, expiresIn}), 5) PasswordResetToken entity lifecycle (create 30m expiry, unique token generation 256-bit base64url), 6) EmailService abstraction with retry/backoff and local logging implementation, 7) Confirm flow (validate token, set new BCrypt password, mark used), 8) Security exposure (auth endpoints public; others secured), 9) Rate-limit stub/hook and audit logging, 10) Tests (MockMvc integration, repository lifecycle, negative cases).",
+			"reasoning": "Multiple flows with security, token lifecycle, and external email abstraction; careful validation and test coverage increase complexity."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Category CRUD APIs",
+			"complexityScore": 5,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Outline: 1) DTOs (CategoryRequest, CategoryResponse) and validation, 2) Controller endpoints (GET/POST /api/categories; PUT/DELETE /api/categories/{id}), 3) Service with ownership checks and unique-per-owner constraint handling, 4) Delete flow with bulk clear of content.category via @Modifying query before delete, 5) Mapping/converters and error codes (409 on duplicates; 403/404 for unauthorized), 6) Pagination or simple list by owner, 7) Integration tests covering ownership, delete behavior, and constraints.",
+			"reasoning": "Straightforward CRUD with ownership and a special delete behavior; moderate complexity due to constraints and bulk update."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Content CRUD for Link, Note, Photo",
+			"complexityScore": 8,
+			"recommendedSubtasks": 12,
+			"expansionPrompt": "Plan: 1) DTOs per type with validation (URI, required fields), 2) Polymorphic create/update handling (switch by type; JOINED mapping), 3) Ownership and category validation, 4) Repositories with QueryDSL predicates and pagination/sorting, 5) Delete behavior cascading/removing Reminders and ShareLinks, 6) Controllers for list/detail/create/update/delete, 7) Response mapping per subtype, 8) Data cleanup rules and transactional boundaries, 9) Performance defaults (page size, sort by createdAt desc), 10) Integration tests per type and security isolation, 11) Validation tests (URL, requireds), 12) Deletion side-effects tests (reminders/sharelinks).",
+			"reasoning": "Complex polymorphic domain with security, validation, pagination, and cascading side effects; requires broad test coverage."
+		},
+		{
+			"taskId": 11,
+			"taskTitle": "Keyword search API using QueryDSL and PostgreSQL FTS",
+			"complexityScore": 7,
+			"recommendedSubtasks": 9,
+			"expansionPrompt": "Break into: 1) API contract (GET /api/search with params), 2) Postgres FTS query (to_tsvector + websearch_to_tsquery/plainto_tsquery, order by ts_rank), 3) H2/local fallback using ILIKE across fields, 4) QueryDSL integration (native for FTS; predicates for fallback), 5) Pagination and relevance sorting, 6) Ownership filtering, 7) Keyword sanitization/limits, 8) Tests with Postgres (Testcontainers or dedicated profile) validating ranking and edge cases, 9) Documentation of behavior differences per profile.",
+			"reasoning": "Dual execution paths (FTS vs fallback), ranking, and DB-specific behavior add complexity; careful testing needed."
+		},
+		{
+			"taskId": 12,
+			"taskTitle": "Reminder scheduling and event emission",
+			"complexityScore": 6,
+			"recommendedSubtasks": 9,
+			"expansionPrompt": "Detail: 1) Reminder DTO and controller to create reminders with validation (future time, ownership), 2) Persistence model with processedAt/status and UTC handling, 3) Scheduler (@Scheduled) job with polling interval and batch size, 4) Concurrency-safe claim-and-update SQL (UPDATE ... WHERE processed_at IS NULL RETURNING), 5) NotificationPublisher interface and local logging implementation, 6) Idempotency and retries, 7) Cascade/cancel on content delete, 8) Clock bean and time-zone handling, 9) Tests for scheduling, idempotency, and concurrency.",
+			"reasoning": "Moderate complexity due to scheduling, concurrency control, and idempotency; external delivery is abstracted which reduces scope."
+		},
+		{
+			"taskId": 13,
+			"taskTitle": "Content share link creation and public access endpoint",
+			"complexityScore": 6,
+			"recommendedSubtasks": 8,
+			"expansionPrompt": "Plan: 1) Token generation utility (secure random base62/base64url, 32+ chars), 2) ShareLink entity and repository methods (findByToken/isActive/expiry), 3) POST /api/contents/{id}/share-links with ownership verification and policy (allow multiple; return latest), 4) Public GET /share/{token} returning safe projection, 5) Deactivation/invalidation rules on content deletion, 6) Basic anti-abuse logging and metrics, 7) Security configuration (public endpoint), 8) Integration tests for creation, public fetch, expiry, and ownership.",
+			"reasoning": "Moderate complexity with security boundary (public access), token lifecycle, and safe data projection."
+		},
+		{
+			"taskId": 14,
+			"taskTitle": "GraphQL read-only queries for content and categories",
+			"complexityScore": 5,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Scope: 1) Define schema.graphqls (types, interface, queries), 2) DTOs/mappers aligned with REST, 3) Resolvers (@QueryMapping/@SchemaMapping) and wiring, 4) DataLoader setup to avoid N+1, 5) Security (JWT on /graphql; disable mutations), 6) Tests with WebTestClient for auth and query correctness, 7) Query count assertions to ensure batching works.",
+			"reasoning": "Read-only GraphQL with DataLoader is manageable; complexity arises from schema design and N+1 avoidance."
+		},
+		{
+			"taskId": 15,
+			"taskTitle": "Operational concerns: logging, error handling, and metrics",
+			"complexityScore": 6,
+			"recommendedSubtasks": 10,
+			"expansionPrompt": "Organize: 1) Global error model and @ControllerAdvice mapping, 2) CorrelationId filter (X-Correlation-Id generation/propagation), 3) Logback configuration (JSON/pattern, masking PII and tokens), 4) Business event logs (content create, share, reminder fired), 5) Micrometer metrics and Actuator endpoints (/health, /metrics) with security, 6) Security headers and CORS, 7) HikariCP and timeouts tuning, 8) Log sampling for noisy endpoints, 9) Tests for exception mapping, headers, and metrics visibility, 10) Documentation of operational runbooks.",
+			"reasoning": "Cross-cutting concerns spanning logging, security headers, and observability; moderate complexity with careful config and tests."
+		},
+		{
+			"taskId": 16,
+			"taskTitle": "Database migrations and indexes for Postgres",
+			"complexityScore": 8,
+			"recommendedSubtasks": 11,
+			"expansionPrompt": "Detail migrations as: 1) Choose Flyway and add dependency/config, 2) V1__init.sql creating base tables with UUID PKs and constraints, 3) JOINED inheritance table design for Content and subtypes, 4) Foreign keys with ON DELETE behaviors (SET NULL for category; CASCADE for reminders/sharelinks), 5) Unique and secondary indexes (email, tokens, content owner/created_at, etc.), 6) FTS support (generated tsvector or triggers for JOINED body fields) and GIN index, 7) Seed data for test profile (optional), 8) H2 compatibility strategy or disable Flyway on H2, 9) Validation step (Flyway info/validate in CI), 10) Performance verification (EXPLAIN on search), 11) Forward-only change management and naming conventions.",
+			"reasoning": "High complexity due to schema for inheritance, FTS generated columns/triggers, referential actions, and environment compatibility."
+		}
+	]
+}

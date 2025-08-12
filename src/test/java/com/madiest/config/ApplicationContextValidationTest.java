@@ -5,23 +5,25 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Integration tests to validate that the Gradle build configuration
- * properly loads the Spring application context
- * Testing Framework: JUnit 5 with Spring Boot Test
- */
 @SpringBootTest(classes = MoapinApplication.class)
 @ActiveProfiles("test")
 @DisplayName("Application Context Validation Tests")
+
 class ApplicationContextValidationTest {
 
     @Autowired
     private ApplicationContext applicationContext;
+
+    @MockBean
+    private S3Presigner s3Presigner;
 
     @Test
     @DisplayName("Should load application context successfully")

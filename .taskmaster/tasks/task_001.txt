@@ -27,7 +27,7 @@ Add the necessary dependencies to the `build.gradle.kts` file. This step focuses
 ### Dependencies: None
 ### Description: Incorporate the client libraries required to communicate with all specified external services: MinIO, MeiliSearch, and AWS SES.
 ### Details:
-Find the appropriate Maven coordinates for the official or recommended Java clients for MinIO, MeiliSearch, and AWS SDK for Java v2 (SES). Add these to the `build.gradle.kts` file.
+Find the appropriate Maven coordinates for the official or recommended Java clients for MinIO, MeiliSearch, and AWS SDK for Java v2 (SES). Add these to the `build.gradle` file.
 
 ## 4. Implement Externalized Configuration Properties [pending]
 ### Dependencies: None

@@ -1,0 +1,2 @@
+-- Flyway baseline migration
+-- Intentionally left minimal. Subsequent migrations will create tables.

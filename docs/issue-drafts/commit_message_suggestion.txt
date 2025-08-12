@@ -1,0 +1,9 @@
+feat(domain): introduce Flyway baseline & unify auditing across core entities
+
+- Add Flyway (V1 baseline, V2 users/categories)
+- Refactor User/Category/Content to extend Auditable
+- User: status, lastLoginAt, indexes
+- Category: unique (user_id,name), remove cascade
+- Content: auditing unification
+
+BREAKING CHANGE: legacy controllers/entities removed.
