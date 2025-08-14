@@ -1,4 +1,4 @@
-package com.madiest.moapin.controller;
+package com.madiest.moapin.test.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
