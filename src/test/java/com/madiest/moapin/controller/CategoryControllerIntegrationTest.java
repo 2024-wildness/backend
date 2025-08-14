@@ -12,9 +12,9 @@ import com.madiest.moapin.auth.dto.SignUpRequest;
 import java.util.Arrays;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -57,7 +57,7 @@ public class CategoryControllerIntegrationTest {
   @BeforeEach
   void setUp() throws Exception {
     testPrefix = UUID.randomUUID().toString().substring(0, 8);
-    
+
     SignUpRequest signup = new SignUpRequest();
     signup.setUsername("catuser");
     signup.setEmail("cat@example.com");
@@ -194,7 +194,9 @@ public class CategoryControllerIntegrationTest {
 
     // sort by name (ascending - A should come first)
     String byName =
-        mvc.perform(get("/api/categories?sort=name&direction=ASC").header("Authorization", "Bearer " + token))
+        mvc.perform(
+                get("/api/categories?sort=name&direction=ASC")
+                    .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
@@ -227,7 +229,7 @@ public class CategoryControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(signup1)))
         .andExpect(status().isOk());
-    
+
     LoginRequest login1 = new LoginRequest();
     login1.setUsername(user1Prefix + "_user1");
     login1.setPassword("pass1234");

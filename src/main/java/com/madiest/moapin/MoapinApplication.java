@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 // Scan all application packages so that @ConfigurationProperties classes like
 // com.madiest.moapin.common.config.AppProperties are registered.
 @org.springframework.boot.context.properties.ConfigurationPropertiesScan(
-  basePackages = "com.madiest.moapin")
+    basePackages = "com.madiest.moapin")
 @org.springframework.scheduling.annotation.EnableScheduling
 public class MoapinApplication {
 

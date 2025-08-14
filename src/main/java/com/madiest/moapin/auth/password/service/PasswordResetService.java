@@ -35,19 +35,19 @@ public class PasswordResetService {
     }
 
     User user = userOpt.get();
-    
+
     // Clean up any existing tokens for this user
     tokenRepository.findAll().stream()
         .filter(token -> token.getUser().getId().equals(user.getId()))
         .forEach(tokenRepository::delete);
-    
+
     // Generate a new token
     String tokenValue = UUID.randomUUID().toString();
-    PasswordResetToken token = new PasswordResetToken(
-        tokenValue, user, LocalDateTime.now().plusHours(1));
-    
+    PasswordResetToken token =
+        new PasswordResetToken(tokenValue, user, LocalDateTime.now().plusHours(1));
+
     tokenRepository.save(token);
-    
+
     // TODO: Send email with token (for now, just store the token)
   }
 
@@ -61,24 +61,24 @@ public class PasswordResetService {
   @Transactional
   public void completePasswordReset(String token, String newPassword) {
     Optional<PasswordResetToken> tokenOpt = tokenRepository.findByToken(token);
-        
+
     if (tokenOpt.isEmpty()) {
       throw new IllegalArgumentException("Invalid token");
     }
-    
+
     PasswordResetToken resetToken = tokenOpt.get();
-    
+
     // Check if token is expired or used
     if (resetToken.isUsed() || resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
       throw new IllegalArgumentException("Token is expired or already used");
     }
-    
+
     User user = resetToken.getUser();
-    
+
     // Update password
     user.setPassword(passwordEncoder.encode(newPassword));
     userRepository.save(user);
-    
+
     // Mark token as used
     resetToken.setUsed(true);
     tokenRepository.save(resetToken);

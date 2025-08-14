@@ -40,11 +40,20 @@ public class ContentService {
             .findByIdAndUser(categoryId, user)
             .orElseThrow(() -> new RuntimeException("Category not found"));
 
-    Content content = switch (ContentType.valueOf(type)) {
-      case PHOTO -> new Photo(title, user, category, fileKey);
-      case LINK -> new Link(title, user, category, url);
-      case NOTE -> new Note(title, user, category, body);
-    };
+    Content content;
+    switch (ContentType.valueOf(type)) {
+      case PHOTO:
+        content = new Photo(title, user, category, fileKey);
+        break;
+      case LINK:
+        content = new Link(title, user, category, url);
+        break;
+      case NOTE:
+        content = new Note(title, user, category, body);
+        break;
+      default:
+        throw new IllegalArgumentException("Unknown content type: " + type);
+    }
 
     return contentRepository.save(content);
   }

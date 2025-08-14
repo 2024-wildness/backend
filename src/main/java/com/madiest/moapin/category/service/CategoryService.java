@@ -20,8 +20,10 @@ public class CategoryService {
   private final UserRepository userRepository;
 
   private User getCurrentUser() {
-    String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-    return userRepository.findByUsername(username)
+    String username =
+        (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    return userRepository
+        .findByUsername(username)
         .orElseThrow(() -> new RuntimeException("User not found: " + username));
   }
 
@@ -36,13 +38,15 @@ public class CategoryService {
   @Transactional
   public Category updateCategory(Long categoryId, String name) {
     User user = getCurrentUser();
-    Category category = categoryRepository.findById(categoryId)
-        .orElseThrow(() -> new RuntimeException("Category not found"));
-    
+    Category category =
+        categoryRepository
+            .findById(categoryId)
+            .orElseThrow(() -> new RuntimeException("Category not found"));
+
     if (!category.getUser().getId().equals(user.getId())) {
       throw new AccessDeniedException("Access denied to category");
     }
-    
+
     category.setName(name);
     return categoryRepository.save(category);
   }
@@ -50,13 +54,15 @@ public class CategoryService {
   @Transactional
   public void deleteCategory(Long categoryId) {
     User user = getCurrentUser();
-    Category category = categoryRepository.findById(categoryId)
-        .orElseThrow(() -> new RuntimeException("Category not found"));
-    
+    Category category =
+        categoryRepository
+            .findById(categoryId)
+            .orElseThrow(() -> new RuntimeException("Category not found"));
+
     if (!category.getUser().getId().equals(user.getId())) {
       throw new AccessDeniedException("Access denied to category");
     }
-    
+
     // TODO: Verify cascade deletion of contents is handled
     categoryRepository.delete(category);
   }

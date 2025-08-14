@@ -34,13 +34,14 @@ public class JwtService {
     // Provide a sensible default (1 hour) if not configured to keep tests and local runs working.
     this.expiration = configured != null ? configured : Duration.ofHours(1);
     this.clock = clock;
-    
+
     // Initialize secret key
     String secret = props.getJwt().getSecretKey();
     if (secret == null || secret.isEmpty()) {
-      throw new IllegalStateException("JWT secret key is not configured. Please set app.jwt.secret or app.jwt.secret-key property.");
+      throw new IllegalStateException(
+          "JWT secret key is not configured. Please set app.jwt.secret property.");
     }
-    
+
     try {
       byte[] keyBytes = Base64.getDecoder().decode(secret);
       this.secretKey = Keys.hmacShaKeyFor(keyBytes);
@@ -76,10 +77,7 @@ public class JwtService {
    */
   public boolean validateToken(String token) {
     try {
-      Jwts.parser()
-          .verifyWith(secretKey)
-          .build()
-          .parseSignedClaims(token);
+      Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
       return true;
     } catch (Exception e) {
       return false;
@@ -94,11 +92,7 @@ public class JwtService {
    * @throws Exception 토큰이 유효하지 않거나 디코딩에 실패한 경우 발생합니다.
    */
   public Claims decode(String token) {
-    return Jwts.parser()
-        .verifyWith(secretKey)
-        .build()
-        .parseSignedClaims(token)
-        .getPayload();
+    return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
   }
 
   /**

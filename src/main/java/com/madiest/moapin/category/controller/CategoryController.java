@@ -41,16 +41,25 @@ public class CategoryController {
   public ResponseEntity<List<CategoryListResponse>> getCategories(
       @RequestParam(defaultValue = "createdAt") String sort,
       @RequestParam(defaultValue = "DESC") Sort.Direction direction) {
-    String sortBy = switch (sort) {
-      case "name" -> "name";
-      case "createdDate" -> "createdAt";
-      case "custom" -> "orderIndex";
-      default -> "createdAt";
-    };
-    
+    String sortBy;
+    switch (sort) {
+      case "name":
+        sortBy = "name";
+        break;
+      case "createdDate":
+        sortBy = "createdAt";
+        break;
+      case "custom":
+        sortBy = "orderIndex";
+        break;
+      default:
+        sortBy = "createdAt";
+        break;
+    }
+
     // For custom sort (orderIndex), always use ASC to respect the manual order
     Sort.Direction finalDirection = "custom".equals(sort) ? Sort.Direction.ASC : direction;
-    
+
     List<Category> categories = categoryService.getCategories(sortBy, finalDirection);
     List<CategoryListResponse> response =
         categories.stream().map(CategoryListResponse::from).toList();

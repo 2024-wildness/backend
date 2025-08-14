@@ -5,9 +5,9 @@ import com.madiest.moapin.auth.dto.SignUpResponse;
 import com.madiest.moapin.auth.model.User;
 import com.madiest.moapin.auth.repository.UserRepository;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 /** Service layer for authentication operations. */
 @Service
@@ -41,6 +41,7 @@ public class AuthService {
     return userRepository
         .findByUsername(username)
         .filter(u -> passwordEncoder.matches(rawPassword, u.getPassword()))
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
+        .orElseThrow(
+            () -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
   }
 }
