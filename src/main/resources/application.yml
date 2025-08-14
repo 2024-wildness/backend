@@ -1,29 +1,49 @@
 spring:
   application:
     name: moapin
+  profiles:
+    group:
+      local: dev
+      prod: prod
 
+# Custom application namespace (shared defaults; overridden per profile)
 app:
-  data-source:
-    url: ${POSTGRES_URL}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
   storage:
-    endpoint: ${MINIO_ENDPOINT}
-    access-key: ${MINIO_ACCESS_KEY}
-    secret-key: ${MINIO_SECRET_KEY}
-    bucket: ${MINIO_BUCKET}
+    endpoint: ${MINIO_ENDPOINT:}
+    access-key: ${MINIO_ACCESS_KEY:}
+    secret-key: ${MINIO_SECRET_KEY:}
+    bucket: ${MINIO_BUCKET:moapin}
   search:
-    host: ${MEILISEARCH_HOST}
-    api-key: ${MEILISEARCH_API_KEY}
+    host: ${MEILISEARCH_HOST:}
+    api-key: ${MEILISEARCH_API_KEY:}
   email:
-    access-key: ${SES_ACCESS_KEY}
-    secret-key: ${SES_SECRET_KEY}
-    region: ${SES_REGION}
+    access-key: ${SES_ACCESS_KEY:}
+    secret-key: ${SES_SECRET_KEY:}
+    region: ${SES_REGION:ap-northeast-2}
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:dev-insecure-change-me}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  observations:
+    key-values:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    com.madiest: DEBUG
+
+flyway:
+  enabled: true
+  baseline-on-migrate: true
+  locations: classpath:db/migration
+  clean-disabled: true

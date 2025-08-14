@@ -4,6 +4,9 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
     id 'org.graalvm.buildtools.native' version '0.10.6'
     id 'org.asciidoctor.jvm.convert' version '3.3.2'
+    id 'com.diffplug.spotless' version '6.25.0'
+    id 'checkstyle'
+    id 'com.google.cloud.tools.jib' version '3.4.2'
 }
 
 group = 'com.madiest'
@@ -50,6 +53,8 @@ dependencies {
     implementation 'org.springframework.session:spring-session-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    // Flyway for database schema migrations (Task 18 baseline)
+    implementation 'org.flywaydb:flyway-core'
     compileOnly 'org.projectlombok:lombok'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
@@ -76,6 +81,12 @@ dependencies {
     testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // QueryDSL JPA for type-safe queries (added for task 17.3)
+    implementation 'com.querydsl:querydsl-jpa:5.1.0:jakarta'
+    annotationProcessor 'com.querydsl:querydsl-apt:5.1.0:jakarta'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
 }
 
 dependencyManagement {
@@ -90,10 +101,73 @@ dependencyManagement {
 tasks.named('test') {
     outputs.dir snippetsDir
     useJUnitPlatform()
-    systemProperty 'spring.test.aot.processing.failOnError', 'false'
+    systemProperty 'spring.test.aot.enabled', 'false'
+}
+
+tasks.named('processTestAot') { enabled = false }
+tasks.named('processAot') { enabled = false }
+
+tasks.withType(Test).configureEach {
+    systemProperty 'spring.test.aot.enabled', 'false'
 }
 
 tasks.named('asciidoctor') {
     inputs.dir snippetsDir
     dependsOn test
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('spotlessCheck')
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+    // Exclude generated sources from formatting
+    targetExclude 'build/generated/**'
+    }
+}
+
+checkstyle {
+    toolVersion = '10.12.0'
+    configFile = file("config/checkstyle/checkstyle.xml")
+}
+
+// Apply exclusions to all Checkstyle tasks (extension itself doesn't support exclude directly)
+tasks.withType(Checkstyle).configureEach {
+    exclude 'build/generated/**'
+}
+
+// Jib containerization (alternative to Dockerfile / buildpacks)
+// Use: ./gradlew jibBuildTar (produces build/jib-image.tar) or configure registry target.
+// To build to local Docker daemon (when running) use: ./gradlew jibDockerBuild
+jib {
+    from {
+        image = 'eclipse-temurin:21-jre'
+    }
+    to {
+        image = 'moapin-app:jib'
+        // registry credentials can be added via gradle.properties or env if pushing
+    }
+    container {
+        mainClass = 'com.madiest.moapin.MoapinApplication'
+        jvmFlags = ['-XX:MaxRAMPercentage=75.0','-XX:+UseContainerSupport']
+        ports = ['8080']
+        labels = [ 'org.opencontainers.image.title':'moapin',
+                   'org.opencontainers.image.description':'Moapin Spring Boot service (Jib build)',
+                   'org.opencontainers.image.licenses':'Apache-2.0' ]
+        environment = [ 'SPRING_PROFILES_ACTIVE':'prod' ]
+        user = '1001'
+    }
+    // Reproducible builds / caching hints
+    allowInsecureRegistries = false
+}
+
+// Ensure generated QueryDSL sources are added to the main source set for IDEs
+sourceSets {
+    main {
+        java {
+            srcDirs += file('build/generated/sources/annotationProcessor/java/main')
+        }
+    }
 }

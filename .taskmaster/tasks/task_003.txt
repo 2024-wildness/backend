@@ -5,7 +5,7 @@
 # Priority: high
 # Description: Build the APIs for creating, reading, updating, deleting, and sorting user-specific content categories (folders).
 # Details:
-Create Category entity linked to a User. Implement REST endpoints for full CRUD operations on categories. Implement sorting options via query parameters (e.g., `?sort=createdDate`). Support custom user-defined sorting by adding an `order_index` field and an endpoint to reorder categories. Ensure deleting a category cascades to delete its associated content items. The category list endpoint should include metadata like content count.
+Create Category entity linked to a User. Implement REST endpoints for full CRUD operations on categories. Implement sorting options via query parameters (e.g., `?sort=createdDate`). Support custom user-defined sorting by adding an `order_index` field and an endpoint to reorder categories. The primary policy for deleting a category is cascade delete; all associated content items will be removed. The category list endpoint should include metadata like content count.
 
 # Test Strategy:
 API tests for all CRUD endpoints (POST, GET, PUT, DELETE). Verify that a user can only manage their own categories. Test the sorting logic, including the custom order. Test the cascade delete functionality to ensure content is removed when a category is deleted.
