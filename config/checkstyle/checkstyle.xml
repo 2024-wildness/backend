@@ -6,17 +6,25 @@
 <module name="Checker">
   <property name="charset" value="UTF-8"/>
 
+  <!-- LineLength 는 TreeWalker 의 자식이 될 수 없으므로 Checker 직속으로 이동 -->
+  <module name="LineLength">
+    <property name="max" value="120"/>
+  </module>
+
+  <!-- 테스트 코드에서는 가독성을 위해 LineLength 를 완화/제외 (suppressions.xml) -->
+  <module name="SuppressionFilter">
+  <property name="file" value="${config_loc}/suppressions.xml"/>
+  </module>
+
   <module name="TreeWalker">
     <module name="Indentation">
-      <property name="basicOffset" value="4"/>
-      <property name="braceAdjustment" value="0"/>
-      <property name="caseIndent" value="4"/>
-      <property name="throwsIndent" value="4"/>
-      <property name="lineWrappingIndentation" value="4"/>
-      <property name="arrayInitIndent" value="4"/>
-    </module>
-    <module name="LineLength">
-      <property name="max" value="120"/>
+  <!-- Align indentation with google-java-format (2 spaces per level) -->
+  <property name="basicOffset" value="2"/>
+  <property name="braceAdjustment" value="0"/>
+  <property name="caseIndent" value="2"/>
+  <property name="throwsIndent" value="2"/>
+  <property name="lineWrappingIndentation" value="2"/>
+  <property name="arrayInitIndent" value="2"/>
     </module>
   </module>
 </module>

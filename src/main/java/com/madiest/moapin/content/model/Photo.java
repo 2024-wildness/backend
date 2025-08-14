@@ -14,10 +14,10 @@ import lombok.NoArgsConstructor;
 @DiscriminatorValue("PHOTO")
 public class Photo extends Content {
 
-    private String fileKey;
+  private String fileKey;
 
-    public Photo(String title, User user, Category category, String fileKey) {
-        super(title, user, category);
-        this.fileKey = fileKey;
-    }
+  public Photo(String title, User user, Category category, String fileKey) {
+    super(title, user, category);
+    this.fileKey = fileKey;
+  }
 }

@@ -5,8 +5,5 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class ResetRequest {
-    @NotBlank
-    @Setter
-    @Getter
-    private String email;
+  @NotBlank @Setter @Getter private String email;
 }

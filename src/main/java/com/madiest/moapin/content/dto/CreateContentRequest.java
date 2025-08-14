@@ -5,22 +5,18 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * Request DTO for creating a content item.
- */
+/** Request DTO for creating a content item. */
 @Setter
 @Getter
 public class CreateContentRequest {
 
-    @NotNull
-    private ContentType type;
+  @NotNull private ContentType type;
 
-    private Long categoryId;
+  private Long categoryId;
 
-    private String fileKey;
+  private String fileKey;
 
-    private String url;
+  private String url;
 
-    private String textContent;
-
+  private String textContent;
 }

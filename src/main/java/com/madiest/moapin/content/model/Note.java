@@ -14,14 +14,14 @@ import lombok.NoArgsConstructor;
 @DiscriminatorValue("NOTE")
 public class Note extends Content {
 
-    private String body;
+  private String body;
 
-    public Note(String title, User user, Category category, String body) {
-        super(title, user, category);
-        this.body = body;
-    }
+  public Note(String title, User user, Category category, String body) {
+    super(title, user, category);
+    this.body = body;
+  }
 
-    public void setBody(String body) {
-        this.body = body;
-    }
+  public void setBody(String body) {
+    this.body = body;
+  }
 }

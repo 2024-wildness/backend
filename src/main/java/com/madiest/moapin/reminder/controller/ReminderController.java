@@ -11,23 +11,23 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ReminderController {
 
-    private final ReminderService reminderService;
+  private final ReminderService reminderService;
 
-    @PostMapping
-    public ResponseEntity<Void> createReminder(@RequestBody ReminderCreateRequest request) {
-        // TODO: Implement reminder creation
-        return ResponseEntity.ok().build();
-    }
+  @PostMapping
+  public ResponseEntity<Void> createReminder(@RequestBody ReminderCreateRequest request) {
+    // TODO: Implement reminder creation
+    return ResponseEntity.ok().build();
+  }
 
-    @DeleteMapping("/{reminderId}")
-    public ResponseEntity<Void> deleteReminder(@PathVariable Long reminderId) {
-        // TODO: Implement reminder deletion
-        return ResponseEntity.ok().build();
-    }
+  @DeleteMapping("/{reminderId}")
+  public ResponseEntity<Void> deleteReminder(@PathVariable Long reminderId) {
+    // TODO: Implement reminder deletion
+    return ResponseEntity.ok().build();
+  }
 
-    @GetMapping
-    public ResponseEntity<Void> getReminders() {
-        // TODO: Implement get reminders
-        return ResponseEntity.ok().build();
-    }
+  @GetMapping
+  public ResponseEntity<Void> getReminders() {
+    // TODO: Implement get reminders
+    return ResponseEntity.ok().build();
+  }
 }

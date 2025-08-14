@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+  <!-- Allow longer lines in test sources for readability of multi-assert blocks -->
+  <suppress files="src/test/java/.*" checks="LineLength" />
+  <!-- Indentation in this specific integration test (nested class layout) is acceptable for readability -->
+  <suppress files="AuditingJpaIntegrationTest.java" checks="Indentation" />
+  <!-- Exclude all generated sources (e.g., QueryDSL, annotation processors) from style checks -->
+  <suppress files="build/generated/.*" checks=".*" />
+</suppressions>

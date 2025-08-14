@@ -15,31 +15,31 @@ import lombok.NoArgsConstructor;
 @DiscriminatorColumn(name = "content_type")
 public abstract class Content extends Auditable {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    private String title;
+  private String title;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id")
+  private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private Category category;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "category_id")
+  private Category category;
 
-    private boolean isPinned;
+  private boolean isPinned;
 
-    private int viewCount;
+  private int viewCount;
 
-    public Content(String title, User user, Category category) {
-        this.title = title;
-        this.user = user;
-        this.category = category;
-    }
+  public Content(String title, User user, Category category) {
+    this.title = title;
+    this.user = user;
+    this.category = category;
+  }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
+  public void setTitle(String title) {
+    this.title = title;
+  }
 }

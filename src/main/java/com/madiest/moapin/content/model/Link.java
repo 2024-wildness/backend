@@ -14,14 +14,14 @@ import lombok.NoArgsConstructor;
 @DiscriminatorValue("LINK")
 public class Link extends Content {
 
-    private String url;
+  private String url;
 
-    public Link(String title, User user, Category category, String url) {
-        super(title, user, category);
-        this.url = url;
-    }
+  public Link(String title, User user, Category category, String url) {
+    super(title, user, category);
+    this.url = url;
+  }
 
-    public void setUrl(String url) {
-        this.url = url;
-    }
+  public void setUrl(String url) {
+    this.url = url;
+  }
 }

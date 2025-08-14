@@ -11,23 +11,23 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ShareLinkController {
 
-    private final ShareLinkService shareLinkService;
+  private final ShareLinkService shareLinkService;
 
-    @PostMapping
-    public ResponseEntity<Void> createShareLink(@RequestBody ShareLinkCreateRequest request) {
-        // TODO: Implement share link creation
-        return ResponseEntity.ok().build();
-    }
+  @PostMapping
+  public ResponseEntity<Void> createShareLink(@RequestBody ShareLinkCreateRequest request) {
+    // TODO: Implement share link creation
+    return ResponseEntity.ok().build();
+  }
 
-    @DeleteMapping("/{shareId}")
-    public ResponseEntity<Void> deleteShareLink(@PathVariable String shareId) {
-        // TODO: Implement share link deletion
-        return ResponseEntity.ok().build();
-    }
+  @DeleteMapping("/{shareId}")
+  public ResponseEntity<Void> deleteShareLink(@PathVariable String shareId) {
+    // TODO: Implement share link deletion
+    return ResponseEntity.ok().build();
+  }
 
-    @GetMapping
-    public ResponseEntity<Void> getShareLinks() {
-        // TODO: Implement get share links
-        return ResponseEntity.ok().build();
-    }
+  @GetMapping
+  public ResponseEntity<Void> getShareLinks() {
+    // TODO: Implement get share links
+    return ResponseEntity.ok().build();
+  }
 }

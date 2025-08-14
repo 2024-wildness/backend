@@ -5,12 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 public class ResetConfirm {
-    @NotBlank
-    @Setter
-    @Getter
-    private String token;
-    @NotBlank
-    @Setter
-    @Getter
-    private String password;
+  @NotBlank @Setter @Getter private String token;
+  @NotBlank @Setter @Getter private String password;
 }

@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class ShareLinkCreateRequest {
-    private Long contentId;
-    private Integer expireDays;
-    private Integer maxDownloads;
+  private Long contentId;
+  private Integer expireDays;
+  private Integer maxDownloads;
 }

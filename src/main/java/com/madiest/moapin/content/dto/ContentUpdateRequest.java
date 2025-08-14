@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class ContentUpdateRequest {
-    private String title;
-    private String body;
-    private String url;
+  private String title;
+  private String body;
+  private String url;
 }

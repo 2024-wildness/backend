@@ -2,11 +2,10 @@ package com.madiest.moapin.auth.password.model;
 
 import com.madiest.moapin.auth.model.User;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -14,25 +13,25 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class PasswordResetToken {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String token;
+  @Column(nullable = false, unique = true)
+  private String token;
 
-    @ManyToOne(targetEntity = User.class, fetch = FetchType.EAGER)
-    @JoinColumn(nullable = false, name = "user_id")
-    private User user;
+  @ManyToOne(targetEntity = User.class, fetch = FetchType.EAGER)
+  @JoinColumn(nullable = false, name = "user_id")
+  private User user;
 
-    @Column(nullable = false)
-    private LocalDateTime expiryDate;
+  @Column(nullable = false)
+  private LocalDateTime expiryDate;
 
-    private boolean used = false;
+  private boolean used = false;
 
-    public PasswordResetToken(String token, User user, LocalDateTime expiryDate) {
-        this.token = token;
-        this.user = user;
-        this.expiryDate = expiryDate;
-    }
+  public PasswordResetToken(String token, User user, LocalDateTime expiryDate) {
+    this.token = token;
+    this.user = user;
+    this.expiryDate = expiryDate;
+  }
 }

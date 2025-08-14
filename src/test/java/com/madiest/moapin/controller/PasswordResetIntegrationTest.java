@@ -2,7 +2,7 @@ package com.madiest.moapin.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.madiest.moapin.auth.password.repository.PasswordResetTokenRepository;
-import com.madiest.moapin.auth.password.dto.ResetConfirm;
+import com.madiest.moapin.auth.password.dto.PasswordUpdateRequest;
 import com.madiest.moapin.auth.password.dto.ResetRequest;
 import com.madiest.moapin.auth.dto.SignUpRequest;
 import com.madiest.moapin.auth.model.User;
@@ -86,9 +86,7 @@ public class PasswordResetIntegrationTest {
         String token = tokenOpt.get().getToken();
 
         // reset password
-        ResetConfirm conf = new ResetConfirm();
-        conf.setToken(token);
-        conf.setPassword("newpass");
+        PasswordUpdateRequest conf = new PasswordUpdateRequest(token, "newpass");
         mvc.perform(post("/api/auth/reset")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(conf)))

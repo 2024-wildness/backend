@@ -6,8 +6,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SearchService {
 
-    @Transactional(readOnly = true)
-    public void search(String query) {
-        // TODO: Implement search logic
-    }
+  @Transactional(readOnly = true)
+  public void search(String query) {
+    // TODO: Implement search logic
+  }
 }

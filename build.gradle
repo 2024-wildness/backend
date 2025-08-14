@@ -123,12 +123,19 @@ tasks.named('check') {
 spotless {
     java {
         googleJavaFormat()
+    // Exclude generated sources from formatting
+    targetExclude 'build/generated/**'
     }
 }
 
 checkstyle {
     toolVersion = '10.12.0'
     configFile = file("config/checkstyle/checkstyle.xml")
+}
+
+// Apply exclusions to all Checkstyle tasks (extension itself doesn't support exclude directly)
+tasks.withType(Checkstyle).configureEach {
+    exclude 'build/generated/**'
 }
 
 // Jib containerization (alternative to Dockerfile / buildpacks)

@@ -1,13 +1,12 @@
 package com.madiest.moapin.reminder.dto;
 
+import java.time.Instant;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.Instant;
 
 @Setter
 @Getter
 public class ReminderRequest {
-    private Long contentId;
-    private Instant remindAt;
+  private Long contentId;
+  private Instant remindAt;
 }

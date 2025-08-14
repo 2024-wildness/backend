@@ -6,5 +6,5 @@ import lombok.Setter;
 @Getter
 @Setter
 public class SearchRequestDto {
-    private String q;
+  private String q;
 }
