@@ -39,11 +39,11 @@ public class SecurityConfig {
                 authorize
                     .requestMatchers("/api/auth/**")
                     .permitAll()
-          .requestMatchers(
-            "/v3/api-docs/**",
-            "/swagger-ui.html",
-            "/swagger-ui/**")
-          .permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**")
+                    .permitAll()
+                    // Allow unauthenticated health probe (for Docker/infra liveness checks)
+                    .requestMatchers("/actuator/health")
+                    .permitAll()
                     .requestMatchers("/api/test/public")
                     .permitAll()
                     .anyRequest()
@@ -52,6 +52,8 @@ public class SecurityConfig {
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
         .httpBasic(withDefaults());
+    // TODO: In production profile consider restricting swagger endpoints or disabling via property:
+    // springdoc.swagger-ui.enabled=false & springdoc.api-docs.enabled=false
     return http.build();
   }
 

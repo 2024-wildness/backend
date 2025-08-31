@@ -7,18 +7,14 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * OpenAPI configuration for Swagger UI & JWT security.
- */
+/** OpenAPI configuration for Swagger UI & JWT security. */
 @Configuration
 @OpenAPIDefinition(
     info = @Info(title = "Moapin API", version = "v1", description = "Moapin service REST API"),
-    security = { @SecurityRequirement(name = "bearer-jwt") }
-)
+    security = {@SecurityRequirement(name = "bearer-jwt")})
 @SecurityScheme(
     name = "bearer-jwt",
     type = SecuritySchemeType.HTTP,
     scheme = "bearer",
-    bearerFormat = "JWT"
-)
-public class OpenApiConfig { }
+    bearerFormat = "JWT")
+public class OpenApiConfig {}

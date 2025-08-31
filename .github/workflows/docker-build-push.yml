@@ -1,0 +1,145 @@
+name: CI - Docker Build & Push
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+    paths:
+      - 'Dockerfile'
+      - 'build.gradle'
+      - 'gradle.properties'
+      - 'src/**'
+  workflow_dispatch:
+    inputs:
+      imageTag:
+        description: "Override image tag (default = git sha)"
+        required: false
+      pushImage:
+        description: "Push image (true/false)"
+        required: false
+        default: "true"
+
+env:
+  REGISTRY: registry.yukey.site
+  IMAGE_NAME: moapin-backend  # adjust if you need a different repository name
+
+jobs:
+  docker:
+    name: Build Runtime Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build application JAR
+        run: ./gradlew bootJar -x test
+
+      - name: Collect artifact metadata
+        id: meta
+        run: |
+          SHA_TAG=${GITHUB_SHA::12}
+          DATE=$(date -u +%Y%m%dT%H%M%SZ)
+          echo "sha_tag=$SHA_TAG" >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+          if [ -n "${{ inputs.imageTag }}" ]; then
+            echo "tag=${{ inputs.imageTag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$SHA_TAG" >> $GITHUB_OUTPUT
+          fi
+      - name: Log in to custom registry
+        if: inputs.pushImage != 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata
+        id: docker_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.meta.outputs.tag }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.date }}
+
+      - name: Build (and optionally push) Docker image
+        id: build_push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ inputs.pushImage != 'false' }}
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
+          build-args: |
+            BUILD_VERSION=${{ steps.meta.outputs.tag }}
+            VCS_REF=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Export image digest
+        if: always()
+        run: echo "Image digest (primary tag=${{ steps.meta.outputs.tag }}) -> ${{ steps.build_push.outputs.digest }}"
+
+      - name: Trivy image scan
+        if: inputs.pushImage != 'false'
+        uses: aquasecurity/trivy-action@v0.22.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          security-checks: 'vuln'
+        continue-on-error: true
+
+      - name: Generate SBOM (Syft)
+        if: inputs.pushImage != 'false'
+        uses: anchore/sbom-action@v0.16.0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          format: spdx-json
+
+      - name: Upload SBOM
+        if: inputs.pushImage != 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: ./sbom.spdx.json
+          if-no-files-found: error
+
+      - name: Summary
+        run: |
+          echo "Built and pushed image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "Date: ${{ steps.meta.outputs.date }}" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Deploy with:" >> $GITHUB_STEP_SUMMARY
+          echo "export APP_IMAGE_TAG=${{ steps.meta.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker compose pull app && docker compose up -d app" >> $GITHUB_STEP_SUMMARY

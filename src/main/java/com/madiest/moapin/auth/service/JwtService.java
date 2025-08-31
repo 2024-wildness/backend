@@ -43,10 +43,27 @@ public class JwtService {
     }
 
     try {
-      byte[] keyBytes = Base64.getDecoder().decode(secret);
+      byte[] keyBytes;
+      if (secret.matches("^[A-Za-z0-9+/]*={0,2}$") && secret.length() >= 32) {
+        // Treat as Base64 if it looks like Base64 and is long enough
+        keyBytes = Base64.getDecoder().decode(secret);
+      } else {
+        // Treat as plain string for dev/test environments
+        keyBytes = secret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        // Ensure minimum key length for HMAC-SHA256 (32 bytes)
+        if (keyBytes.length < 32) {
+          byte[] paddedKey = new byte[32];
+          System.arraycopy(keyBytes, 0, paddedKey, 0, Math.min(keyBytes.length, 32));
+          // Fill remaining with the key repeated
+          for (int i = keyBytes.length; i < 32; i++) {
+            paddedKey[i] = keyBytes[i % keyBytes.length];
+          }
+          keyBytes = paddedKey;
+        }
+      }
       this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     } catch (IllegalArgumentException e) {
-      throw new IllegalStateException("JWT secret key is not valid Base64: " + e.getMessage(), e);
+      throw new IllegalStateException("JWT secret key is not valid: " + e.getMessage(), e);
     }
   }
 

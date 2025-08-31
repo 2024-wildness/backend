@@ -8,6 +8,8 @@ import java.time.Instant;
  * Core User entity. Extends Auditable for createdAt / updatedAt timestamps. NOTE: Password field
  * stores a bcrypt/argon2 hash (value naming kept as 'password' for backward compatibility).
  */
+@Getter
+@Setter
 @Entity
 @Table(
     name = "users",
@@ -42,51 +44,4 @@ public class User extends Auditable {
   @Column(name = "last_login_at")
   private Instant lastLoginAt;
 
-  public Long getId() {
-    return id;
-  }
-
-  public void setId(Long id) {
-    this.id = id;
-  }
-
-  public String getUsername() {
-    return username;
-  }
-
-  public void setUsername(String username) {
-    this.username = username;
-  }
-
-  public String getEmail() {
-    return email;
-  }
-
-  public void setEmail(String email) {
-    this.email = email;
-  }
-
-  public String getPassword() {
-    return password;
-  }
-
-  public void setPassword(String password) {
-    this.password = password;
-  }
-
-  public Status getStatus() {
-    return status;
-  }
-
-  public void setStatus(Status status) {
-    this.status = status;
-  }
-
-  public Instant getLastLoginAt() {
-    return lastLoginAt;
-  }
-
-  public void setLastLoginAt(Instant lastLoginAt) {
-    this.lastLoginAt = lastLoginAt;
-  }
 }

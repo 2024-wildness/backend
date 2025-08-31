@@ -2,11 +2,23 @@
 # 확인된 코드는 빌드되어 테스트를 진행합니다.
 # 이상이 없는 경우에는 빌드 내용을 임시 저장하여 배포를 돕습니다.
 
-name: CI - gradle with compile, test
+name: CI - Gradle Validate (Build & Test)
 
 on:
   pull_request:
     branches: [ "dev" ]
+  push:
+    branches: [ "feature/**" ]
+  workflow_dispatch:
+    inputs:
+      runIntegrationTests:
+        description: "Run integration tests (if any)"
+        required: false
+        default: "false"
+      failOnTestFlaky:
+        description: "Fail build if flaky tests detected (placeholder logic)"
+        required: false
+        default: "false"
 
 defaults:
   run:
@@ -21,24 +33,82 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'oracle'
+          distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
 
-      - name: Run checks and tests with Gradle Wrapper
-        run: ./gradlew check
+      - name: Show Gradle & Git info
+        run: |
+          ./gradlew --version
+          git log -1 --oneline
+
+      - name: Run static checks (Checkstyle, compilation)
+        run: ./gradlew compileJava checkstyleMain checkstyleTest -x test --continue
+
+      - name: Run tests
+        run: |
+          ./gradlew test -Duser.timezone=UTC --no-daemon --info
+        env:
+          TZ: UTC
+
+      - name: (Optional) Integration tests
+        if: inputs.runIntegrationTests == 'true'
+        run: ./gradlew integrationTest --no-daemon
+        continue-on-error: true
+
+      - name: Generate aggregated reports (Jacoco if configured)
+        run: |
+          if ./gradlew tasks | grep -q jacocoTestReport; then
+            ./gradlew jacocoTestReport
+          else
+            echo "Jacoco not configured; skipping";
+          fi
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/**
+            build/test-results/**
+          if-no-files-found: warn
+
+      - name: Build JAR (without re-running tests)
+        run: ./gradlew bootJar -x test
 
       - name: Archive build output
         uses: actions/upload-artifact@v4
         with:
-          name: server-jar
-          path: /build/libs/*.jar
+          name: application-jar
+          path: build/libs/*.jar
+          if-no-files-found: error
+
+      - name: Dependency vulnerability scan (Trivy)
+        if: success()
+        uses: aquasecurity/trivy-action@v0.22.0
+        with:
+          scan-type: 'fs'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          security-checks: 'vuln'
+          path: .
+        continue-on-error: true
 
   dependency-submission:
 
@@ -52,9 +122,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'oracle'
-
-      # 빌드 위치 설정
+          distribution: 'temurin'
       - name: Generate and submit dependency graph
         uses: gradle/actions/dependency-submission@v4
         with:
