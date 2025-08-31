@@ -1,4 +1,7 @@
-build/
+# Exclude most of build output to keep context small, but allow built fat jar(s)
+build/*
+!build/libs/
+!build/libs/*SNAPSHOT.jar
 .gradle/
 gradle/
 *.iml

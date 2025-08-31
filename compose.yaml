@@ -3,9 +3,10 @@ services:
     image: postgres:16-alpine
     container_name: moapin-postgres
     environment:
-      POSTGRES_DB: moapin
-      POSTGRES_USER: moapin
-      POSTGRES_PASSWORD: moapin
+      # Fallback defaults (override in .env for secrets)
+      POSTGRES_DB: ${POSTGRES_DB:-moapin}
+      POSTGRES_USER: ${POSTGRES_USER:-moapin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-moapin}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -32,8 +33,8 @@ services:
     image: rabbitmq:3.13-management-alpine
     container_name: moapin-rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: moapin
-      RABBITMQ_DEFAULT_PASS: moapin
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-moapin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-moapin}
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running"]
       interval: 15s
@@ -44,8 +45,10 @@ services:
       - "15672:15672"
 
   app:
-    build: .
-    image: moapin-app:dev
+    # External build pattern: image MUST be built/pulled beforehand.
+    # Replace TAG via APP_IMAGE_TAG env (export APP_IMAGE_TAG=dev / version) or override directly.
+    # Example: APP_IMAGE_TAG=1.2.3 docker compose up -d
+    image: registry.yukey.site/moapin-backend:602fbcab20fe
     container_name: moapin-app
     depends_on:
       postgres:
@@ -55,18 +58,26 @@ services:
       rabbitmq:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/moapin
-      SPRING_DATASOURCE_USERNAME: moapin
-      SPRING_DATASOURCE_PASSWORD: moapin
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-moapin}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-moapin}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-moapin}
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
-      LOGGING_LEVEL_ROOT: INFO
+      LOGGING_LEVEL_ROOT: ${LOGGING_LEVEL_ROOT:-INFO}
+      APP_SECURITY_JWT_SECRET: ${APP_SECURITY_JWT_SECRET}
     ports:
       - "8080:8080"
     restart: unless-stopped
+    # Optional healthcheck (uncomment if actuator /health is publicly allowed)
+    # healthcheck:
+    #   test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep 'status' || exit 1"]
+    #   interval: 30s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 40s
 
 volumes:
   pg_data:

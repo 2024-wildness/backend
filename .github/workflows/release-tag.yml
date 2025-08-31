@@ -1,0 +1,51 @@
+name: Release Tag Helper
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version (e.g. 0.2.0)'
+        required: true
+      createTagOnly:
+        description: 'Skip docker build (true/false)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Git Tag
+        run: |
+          VERSION="${{ inputs.version }}"
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists" && exit 1
+          fi
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Dispatch Docker Build Workflow
+        if: inputs.createTagOnly != 'true'
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: CI - Docker Build & Push
+          ref: ${{ github.ref_name }}
+          inputs: |
+            imageTag=${{ inputs.version }}
+            pushImage=true
+
+      - name: Summary
+        run: |
+          echo "Created tag v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.createTagOnly }}" != 'true' ]; then
+            echo "Triggered Docker build for v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          fi

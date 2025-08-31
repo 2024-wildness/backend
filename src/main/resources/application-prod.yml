@@ -1,6 +1,7 @@
 spring:
   datasource:
-    url: ${POSTGRES_URL}
+  # Align with compose which sets SPRING_DATASOURCE_URL directly
+  url: ${SPRING_DATASOURCE_URL}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -28,7 +29,7 @@ logging:
 
 app:
   data-source:
-    url: ${POSTGRES_URL}
+  url: ${SPRING_DATASOURCE_URL}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
 

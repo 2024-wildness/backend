@@ -5,6 +5,9 @@ spring:
     group:
       local: dev
       prod: prod
+  docker:
+    compose:
+      enabled: false
 
 # Custom application namespace (shared defaults; overridden per profile)
 app:
