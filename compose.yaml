@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: moapin-postgres
+    profiles: [ "prod" ]
     environment:
       # Fallback defaults (override in .env for secrets)
       POSTGRES_DB: ${POSTGRES_DB:-moapin}
@@ -44,11 +45,37 @@ services:
       - "5672:5672"
       - "15672:15672"
 
+  minio:
+    image: minio/minio:RELEASE.2025-01-20T14-49-07Z
+    container_name: moapin-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.8.1
+    container_name: moapin-meilisearch
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-dev-master-key}
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:7700/health | grep 'available' || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "7700:7700"
+
   app:
-    # External build pattern: image MUST be built/pulled beforehand.
-    # Replace TAG via APP_IMAGE_TAG env (export APP_IMAGE_TAG=dev / version) or override directly.
-    # Example: APP_IMAGE_TAG=1.2.3 docker compose up -d
-    image: registry.yukey.site/moapin-backend:602fbcab20fe
+    # Production app service (uses Postgres)
+    # Image is driven by .env -> APP_IMAGE. For prod/registry, set APP_IMAGE=registry.yukey.site/moapin-backend:<tag>.
+    image: ${APP_IMAGE:-moapin-app:dev}
+    profiles: [ "prod" ]
     container_name: moapin-app
     depends_on:
       postgres:
@@ -57,17 +84,35 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      minio:
+        condition: service_started
+      meilisearch:
+        condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-moapin}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-moapin}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-moapin}
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: 6379
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 5672
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
+      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-rabbitmq}
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
       LOGGING_LEVEL_ROOT: ${LOGGING_LEVEL_ROOT:-INFO}
-      APP_SECURITY_JWT_SECRET: ${APP_SECURITY_JWT_SECRET}
+      # Prefer JWT_SECRET; APP_SECURITY_JWT_SECRET kept for backward compatibility
+      JWT_SECRET: ${JWT_SECRET:-}
+      APP_SECURITY_JWT_SECRET: ${APP_SECURITY_JWT_SECRET:-}
+      # MinIO wiring for S3-compatible storage
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-moapin}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      # MeiliSearch wiring
+      MEILISEARCH_HOST: ${MEILISEARCH_HOST:-http://meilisearch:7700}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY:-dev-master-key}
+      # Swagger toggles (prod default off; enable by setting to 'true')
+      SPRINGDOC_API_DOCS_ENABLED: ${SPRINGDOC_API_DOCS_ENABLED:-false}
+      SPRINGDOC_SWAGGER_UI_ENABLED: ${SPRINGDOC_SWAGGER_UI_ENABLED:-false}
     ports:
       - "8080:8080"
     restart: unless-stopped
@@ -79,5 +124,40 @@ services:
     #   retries: 5
     #   start_period: 40s
 
+  app-dev:
+    # Development app service (uses H2 in-memory DB)
+    image: ${APP_IMAGE:-moapin-app:dev}
+    profiles: [ "dev" ]
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      meilisearch:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-dev}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
+      SPRING_RABBITMQ_HOST: ${SPRING_RABBITMQ_HOST:-rabbitmq}
+      SPRING_RABBITMQ_PORT: ${SPRING_RABBITMQ_PORT:-5672}
+      LOGGING_LEVEL_ROOT: ${LOGGING_LEVEL_ROOT:-INFO}
+      JWT_SECRET: ${JWT_SECRET:-}
+      APP_SECURITY_JWT_SECRET: ${APP_SECURITY_JWT_SECRET:-}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-moapin}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      MEILISEARCH_HOST: ${MEILISEARCH_HOST:-http://meilisearch:7700}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY:-dev-master-key}
+      SPRINGDOC_API_DOCS_ENABLED: ${SPRINGDOC_API_DOCS_ENABLED:-true}
+      SPRINGDOC_SWAGGER_UI_ENABLED: ${SPRINGDOC_SWAGGER_UI_ENABLED:-true}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
 volumes:
   pg_data:
+  minio_data:

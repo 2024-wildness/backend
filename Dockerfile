@@ -10,6 +10,9 @@ ARG BUILD_VERSION=dev
 ARG VCS_REF=local
 
 FROM ${BASE_IMAGE_RUN} AS runtime
+# Re-declare build args in-stage for use in LABEL and other instructions
+ARG BUILD_VERSION=dev
+ARG VCS_REF=local
 LABEL org.opencontainers.image.title="moapin" \
       org.opencontainers.image.description="Moapin Spring Boot service" \
       org.opencontainers.image.licenses="Apache-2.0" \
@@ -35,4 +38,3 @@ EXPOSE 8080
 #   CMD wget -qO- http://127.0.0.1:8080/actuator/health | grep '"status":"UP"' || exit 1
 
 ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]
-
