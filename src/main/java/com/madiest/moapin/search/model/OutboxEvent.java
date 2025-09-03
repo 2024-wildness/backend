@@ -19,7 +19,8 @@ public class OutboxEvent {
   @Enumerated(EnumType.STRING)
   private Operation operation;
 
-  @Lob private String payload;
+  @Column(columnDefinition = "text")
+  private String payload;
 
   private boolean processed;
 

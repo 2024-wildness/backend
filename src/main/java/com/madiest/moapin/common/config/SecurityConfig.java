@@ -1,7 +1,5 @@
 package com.madiest.moapin.common.config;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
 import com.madiest.moapin.auth.filter.JwtAuthenticationFilter;
 import com.madiest.moapin.auth.service.JwtService;
 import org.springframework.context.annotation.Bean;
@@ -41,6 +39,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**")
                     .permitAll()
+                        .requestMatchers("/favicon.ico")
+                        .permitAll()
                     // Allow unauthenticated health probe (for Docker/infra liveness checks)
                     .requestMatchers("/actuator/health")
                     .permitAll()
@@ -50,8 +50,7 @@ public class SecurityConfig {
                     .authenticated())
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-        .httpBasic(withDefaults());
+            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
     // TODO: In production profile consider restricting swagger endpoints or disabling via property:
     // springdoc.swagger-ui.enabled=false & springdoc.api-docs.enabled=false
     return http.build();

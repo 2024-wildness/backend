@@ -37,14 +37,15 @@ app:
     password: ''
   dev-banner: true
   storage:
-    endpoint: http://localhost:9000
-    access-key: dev-access-key
-    secret-key: dev-secret-key
-    bucket: dev-bucket
+    # Defer to .env (application.yml already maps MINIO_*), provide sensible dev defaults
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:moapin}
   email:
-    access-key: dev-ses-access-key
-    secret-key: dev-ses-secret-key
-    region: ap-northeast-2
+    access-key: ${SES_ACCESS_KEY:}
+    secret-key: ${SES_SECRET_KEY:}
+    region: ${SES_REGION:ap-northeast-2}
 
 management:
   endpoint:
@@ -53,6 +54,6 @@ management:
 
 springdoc:
   api-docs:
-    enabled: true
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:true}
   swagger-ui:
-    enabled: true
+    enabled: ${SPRINGDOC_SWAGGER_UI_ENABLED:true}
