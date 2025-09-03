@@ -6,19 +6,23 @@ import com.madiest.moapin.search.repository.OutboxEventRepository;
 import com.meilisearch.sdk.Client;
 import com.meilisearch.sdk.Index;
 import com.meilisearch.sdk.json.JacksonJsonHandler;
-import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Optional;
+
 /** Background job that processes outbox events and updates MeiliSearch. */
 @Service
+@ConditionalOnBean(Client.class)
 public class SearchIndexerService {
   private final OutboxEventRepository repository;
-  private final Client client;
+    private final Optional<Client> client;
   private final ObjectMapper mapper = new ObjectMapper();
 
-  public SearchIndexerService(OutboxEventRepository repository, Client client) {
+    public SearchIndexerService(OutboxEventRepository repository, Optional<Client> client) {
     this.repository = repository;
     this.client = client;
   }
@@ -26,9 +30,10 @@ public class SearchIndexerService {
   @Scheduled(fixedDelay = 5000)
   @Transactional
   public void processEvents() {
+      if (client.isEmpty()) return; // search disabled
     List<OutboxEvent> events = repository.findByProcessedFalse();
     if (events.isEmpty()) return;
-    Index index = client.index("contents");
+      Index index = client.get().index("contents");
     for (OutboxEvent e : events) {
       try {
         if (e.getOperation() == OutboxEvent.Operation.DELETE) {

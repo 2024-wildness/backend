@@ -2,6 +2,9 @@ package com.madiest.moapin.auth.model;
 
 import com.madiest.moapin.persistence.Auditable;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.Instant;
 
 /**

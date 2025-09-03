@@ -1,9 +1,9 @@
 spring:
   datasource:
-  # Align with compose which sets SPRING_DATASOURCE_URL directly
-  url: ${SPRING_DATASOURCE_URL}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    # Align with compose which sets SPRING_DATASOURCE_URL directly
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD}}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 15
@@ -22,6 +22,11 @@ spring:
   sql:
     init:
       mode: never
+  flyway:
+    url: ${SPRING_DATASOURCE_URL}
+    user: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD}}
+    driver-class-name: org.postgresql.Driver
 
 logging:
   level:
@@ -29,9 +34,9 @@ logging:
 
 app:
   data-source:
-  url: ${SPRING_DATASOURCE_URL}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME:${POSTGRES_USER}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD}}
 
 management:
   endpoint:
@@ -40,6 +45,6 @@ management:
 
 springdoc:
   api-docs:
-    enabled: false
+    enabled: ${SPRINGDOC_API_DOCS_ENABLED:false}
   swagger-ui:
-    enabled: false
+    enabled: ${SPRINGDOC_SWAGGER_UI_ENABLED:false}

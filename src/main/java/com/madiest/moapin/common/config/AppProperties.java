@@ -1,7 +1,8 @@
 package com.madiest.moapin.common.config;
 
-import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.time.Duration;
 
 @ConfigurationProperties(prefix = "app")
 public class AppProperties {
@@ -63,6 +64,7 @@ public class AppProperties {
     private String secretKey;
     private String bucket;
     private String endpoint;
+    private String region;
 
     public String getAccessKey() {
       return accessKey;
@@ -94,6 +96,14 @@ public class AppProperties {
 
     public void setEndpoint(String endpoint) {
       this.endpoint = endpoint;
+    }
+
+    public String getRegion() {
+      return region;
+    }
+
+    public void setRegion(String region) {
+      this.region = region;
     }
   }
 
